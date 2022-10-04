@@ -1,0 +1,19 @@
+{
+  "name": "@onejs-dev/core",
+  "version": "0.0.1",
+  "description": "Core functions for oneJS apps.",
+  "main": "core.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oneJS-dev/core.git"
+  },
+  "author": "oneJS",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/oneJS-dev/core/issues"
+  },
+  "homepage": "https://oneJS.dev"
+}

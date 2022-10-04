@@ -9,7 +9,7 @@
 import React from 'react';
 
 // //Web vs Native specific differences
-import {OSSPECIFICS} from '@onejs-dev/onecore/osSpecifics/osSpecifics';
+import {OSSPECIFICS} from '@onejs-dev/core/osSpecifics/osSpecifics';
 
 //Conditionally import Firestore
 if(OSSPECIFICS.firestore) {

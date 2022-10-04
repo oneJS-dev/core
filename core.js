@@ -17,6 +17,12 @@ if(OSSPECIFICS.firestore) {
 }
 
 /**
+* @description The operating system where the app is being executed: web, android or ios. 
+* @type {String}
+*/
+export const os = OSSPECIFICS.os;
+
+/**
 * @description All the module internal global variables are properties of the ONEJS object. 
 * @type {Object}
 */

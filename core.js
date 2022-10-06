@@ -1565,7 +1565,7 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
             flexDirection: 'column',       //Row or column
             justifyContent: 'flex-start',  //Horizontal alignment of the items
             alignItems: 'stretch',         //Vertical alignment of the items
-            alignContent: 'flex-start',    //Vertical alignment of the items
+            alignContent: 'flex-start',    //Horizontal alignment of the item columns
         }
         document.body.classList.add(OSSPECIFICS.css(bodyStyle));
     }
@@ -1682,7 +1682,7 @@ const toStandardStyle = (themeVariableId, themeVariableValue) => {
         let standardGradient = generateGradient(themeVariableValue);
         standardGradient = typeof standardGradient === 'string' ? standardGradient : {id: svgId, ...standardGradient};
         const svgGradient = generateGradient({...themeVariableValue, svgId: svgId});
-        ONEJS.iconGradients.set(svgId ?? standardGradient, {id: svgId, value: svgGradient});
+        ONEJS.iconGradients.set(standardGradient?.id ?? standardGradient, {id: svgId, value: svgGradient});
         return standardGradient;
     }
     else return themeVariableValue;
@@ -1995,14 +1995,14 @@ export const mergeStyles = (...styles) => {
 */
 export const positionContent = (content) => {
     let direction = 'row';          //Direction of the content. Row: Content flows along the x-axis (horizontal). Column: Content flows along the y-axis (vertical).
-    let wrap = 'wrap';              //Wraps the content adding new lines if it exceeds the space in the longitudinal direction.
+    let wrap = 'nowrap';            //Wraps the content adding new lines if it exceeds the space in the longitudinal direction.
     let longitudinal = 'flex-start';//Positioning in the content direction
     let transversal = 'flex-start'; //Positioning in the cross direction, perpendicular to the content
     let overflow = 'flex-start';    //Positioning of the different rows and columns of content that overflow how are they aligned to each other.
     let gap = undefined;            //Gap between content items
 
     if(content) {
-        wrap = (content.wrap ?? true) ? 'wrap' : 'nowrap';
+        wrap = (content.wrap ?? false) ? 'wrap' : 'nowrap';
         direction = content.direction ?? 'row';
         gap = content.gap ?? undefined;
         longitudinal = direction === 'row' ? content.h ?? 'left' : content.v ?? 'top';  //In the content direction
@@ -2088,9 +2088,9 @@ export const oneTheme = {
             rejectColor: '#ff5100',
 
             //Text
-            textFont: 'AvenirNext, Arial, sans-serif',
+            textFont: OSSPECIFICS.os === 'web' ? 'Avenir Next, Arial, sans-serif' : OSSPECIFICS.os === 'ios' ? 'Avenir Next' : 'Roboto',
             textColor: '#666488',
-            textSize: '100%',
+            textSize: 16,
             textWeight: 'normal',
 
             //Border
@@ -2115,17 +2115,17 @@ export const oneTheme = {
         title: {
             // textColor: '#333',
             textColor: '#4c4b66',
-            textSize: '250%',
+            textSize: 40,
         },
         subtitle: {
             // textColor: '#666',
             textColor: '#666488',
-            textSize: '175%',
+            textSize: 30,
         },
         header: {
             // textColor: '#666',
             textColor: '#666488',
-            textSize: '120%',
+            textSize: 20,
         },
         primaryGradient: {
             primaryGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},

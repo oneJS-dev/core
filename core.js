@@ -34,13 +34,14 @@ var ONEJS = {
     //State Module
     reactState: [],            //All the React variables part of the 'useState' hook
     reactSetState: [],         //All the React methods to set the state part of the 'useState' hook
-    reactUrl: {},              //The current url for the app for React Native
-    reactSetUrl: {},           //The set method for the reactUrl 'useState' hook
+    url: {},              //The current url for the app for React Native
+    setUrl: {},           //The set method for the url 'useState' hook
     urlStateVariables: [],     //The ids of the state variables that need to be updated on url changes 
     currentState: {},          //Current state of the app, containing the value of all state variables
     stateHistory: [],          //The history of modifications performed to the state
     stateHistorySize: 10,      //Maximum length for the stateHistory array. Limits the amout of modifications stored
     stateHistoryPosition: 0,   //Newest (current) state position is 0. Rewinding the state this value can be changed 
+    fontsLoaded: false,        //Indicates whether custom fonts have been loaded to enable first render. Only for RN
 
     //Components Module    
     memoizedComponents: [],    //React component structure is stored in this array using the name as index
@@ -154,7 +155,7 @@ export const readText = (id, language=getLanguage()) => {
 export const matchUrl = (url) => {
     if(!url) return false;
     //Filter added to remove the empty strings after split. E.g.: Root path is "/" and split converts to ['', '']. Filter turns into []
-    const actualUrlString = OSSPECIFICS.os === 'web' ? decodeURI(location.pathname + location.search) : ONEJS.reactUrl;
+    const actualUrlString = OSSPECIFICS.os === 'web' ? decodeURI(location.pathname + location.search) : ONEJS.url;
     const actualUrl = actualUrlString.split('/').filter(Boolean); //this url will always start with '/'
     const targetUrl = url.split('/').filter(Boolean);
     if(targetUrl.length - actualUrl.length > 1 || (targetUrl.length - actualUrl.length === 1 && targetUrl[targetUrl.length-1] !== '*')) return false;
@@ -190,7 +191,7 @@ const readUrlData = url => {
     } 
     else if(urlToMatch === url) return true;    //If the url does not contain a data ':' segment, return true if the url matches
     //Matches and contains ':' segments
-    const actualUrlString = OSSPECIFICS.os === 'web' ? decodeURI(location.pathname + location.search) : ONEJS.reactUrl;
+    const actualUrlString = OSSPECIFICS.os === 'web' ? decodeURI(location.pathname + location.search) : ONEJS.url;
     const actualUrl = actualUrlString.split('/').filter(Boolean);
     const targetUrl = url.split('/').filter(Boolean);
     for(let i = 0; i < targetUrl.length; i++) {
@@ -291,12 +292,12 @@ const readUrl = (url) => (stateId) => {
 */
 const updateUrl = url => {
     if(typeof url !== 'string') return;
-    let finalUrl = ONEJS.reactUrl;
+    let finalUrl = ONEJS.url;
     if(url === '') finalUrl = '/';
     else if(url.slice(0, 1) === '/') finalUrl = url;
     else if(url.slice(0, 2) === './') finalUrl = finalUrl + url.slice(2 - url.length);
     else finalUrl = finalUrl + url;
-    ONEJS.reactSetUrl(finalUrl);
+    ONEJS.setUrl(finalUrl);
 }
 
 /** 
@@ -1495,7 +1496,7 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
     //*REACT SPECIFIC*
     const appFunction =  ({state={}, template}={}) => {//Called on every rerender
         //Setup url variables
-        if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') [ONEJS.reactUrl, ONEJS.reactSetUrl] = React.useState('/');
+        if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') [ONEJS.url, ONEJS.setUrl] = React.useState('/');
 
         //Set default value for state variables
         Object.entries(state).forEach(([stateId, value]) => {
@@ -1509,16 +1510,16 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
 
         const initialized = React.useRef();
         
+        //Native Initializers: 
         if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') {
-            //Setup url listener for native
+            //Setup url listener for native. Called before setup state in order to avoid the first call when ONEJS.url is first set.
             React.useEffect(() => {
                 if(initialized) ONEJS.urlStateVariables.forEach(stateVariable => write(stateVariable.stateId, readUrlData(stateVariable.url), 'url', 'update'));
-            }, [ONEJS.reactUrl]);
-            //Setup fonts for native
+            }, [ONEJS.url]);
+            //Setup fonts for native. Called before setup state to take advantage of the async loading while the state is being set.
             if(font && typeof font === 'object') {
-                let fontRequire = {};   
-                Object.entries(font).forEach(([key, value]) => {fontRequire[key] = font[key]});
-                const [fontsLoaded] = OSSPECIFICS?.useFonts(fontRequire);
+                const [fontsLoaded] = OSSPECIFICS?.useFonts(font);
+                ONEJS.fontsLoaded = fontsLoaded;
             }
         }
 
@@ -1526,6 +1527,7 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
         if(!initialized.current) {
             setupState(state);
             
+            //Web Initializers
             if(OSSPECIFICS.os === 'web') {
                 //Setup url listeners for web
                 window.addEventListener('urlChange',  (e) => { 
@@ -1542,9 +1544,10 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
             }
             initialized.current = true;
         }
-        
+
         if(!ONEJS.appTemplate) ONEJS.appTemplate = template();
         const structure = template(); //Template needs to be a function, otherwise the code is executed and the elements are not wrapped by reactCreateElement function
+        if((OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') && font && typeof font === 'object' && !ONEJS.fontsLoaded) return null; //Wait until fonts are loaded
         if(Array.isArray(structure) && structure?.length > 0 && structure?.[0]?.key == null) {
             return React.createElement(React.Fragment, null, ...structure);//If the structure is an array with missing 'key' property, then destructure the input
         };
@@ -1556,13 +1559,13 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
             margin: 0,
             minHeight: '100vh',
             display: 'flex',               //Flexbox is the positioning being used
-            flexWrap: 'wrap',              //Items to fall into a different row once exhausted the space on the parent
+            flexWrap: 'nowrap',            //Items do not fall into a different column once exhausted the space on the parent
             flexGrow: '0',                 //It indicates how much they expand horizontally. A value of 0 indicates they do not expand
             flexShrink: '0',               //A value of 0 indicates items do not go smaller than their original width
             flexDirection: 'column',       //Row or column
             justifyContent: 'flex-start',  //Horizontal alignment of the items
             alignItems: 'stretch',         //Vertical alignment of the items
-            alignContent: 'stretch',       //Vertical alignment of the items
+            alignContent: 'flex-start',    //Vertical alignment of the items
         }
         document.body.classList.add(OSSPECIFICS.css(bodyStyle));
     }
@@ -1570,7 +1573,16 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
     //Render the app in the appropiate container
     const AppComponent = React.createElement(appFunction, {state: state, template: template},null);
     if(os === 'web') {
-        const container = document.getElementById('app');
+        const container = document.getElementById('app'); //document.body; //Using body is discoraged by React
+        /* Flexbox works the same way in React Native as it does in CSS on the web, with a few exceptions: https://reactnative.dev/docs/flexbox
+        The defaults are different, with flexDirection defaulting to column instead of row, alignContent defaulting to flex-start instead of stretch, 
+        flexShrink defaulting to 0 instead of 1, the flex parameter only supporting a single number.
+        */
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.alignContent = 'flex-start';
+        container.style.flexShrink = '0';
+
         const reactRoot = OSSPECIFICS.ReactDOM.createRoot(container);
         reactRoot.render(AppComponent);
     }
@@ -1658,16 +1670,6 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
 * @returns {Object} - The css variables with their corresponding values.
 */
 const toStandardStyle = (themeVariableId, themeVariableValue) => {
-    /* Problably released as a future feature if it generates interest
-    //Consolidate borders: on web they can be defined in a single 'border' propeperty while on native
-    if(themeVariableId === 'border' || themeVariableId === 'inputBorder' && typeof themeVariableValue === 'object') {
-        if(OSSPECIFICS.os === 'web') return toPx(themeVariableValue.width) ?? '0px' + ' ' +  themeVariableValue.style ?? 'solid'  + ' ' +  themeVariableValue.color ?? 'tranparent';
-        else return {width: themeVariableValue.width, style: themeVariableValue.style, color: themeVariableValue.color};        
-    } */
-    //Allow using number units in web for radius property as in RN
-    if(themeVariableId === 'radius' && OSSPECIFICS.os === 'web' && (typeof themeVariableValue === 'number')) return toPx(themeVariableValue);
-    //Allow using number units in web for borderWidth property as in RN
-    if((themeVariableId === 'borderWidth' || themeVariableId === 'inputBorderWidth') && OSSPECIFICS.os === 'web' && (typeof themeVariableValue === 'number')) return toPx(themeVariableValue);
     //Create shadow style object based on elevation property
     if(themeVariableId === 'shadow' && typeof themeVariableValue === 'object') return generateShadow(themeVariableValue);
     //Create gradient for texts
@@ -1680,26 +1682,10 @@ const toStandardStyle = (themeVariableId, themeVariableValue) => {
         let standardGradient = generateGradient(themeVariableValue);
         standardGradient = typeof standardGradient === 'string' ? standardGradient : {id: svgId, ...standardGradient};
         const svgGradient = generateGradient({...themeVariableValue, svgId: svgId});
-        ONEJS.iconGradients.set(svgId, {id: svgId, value: svgGradient});
+        ONEJS.iconGradients.set(svgId ?? standardGradient, {id: svgId, value: svgGradient});
         return standardGradient;
     }
     else return themeVariableValue;
-}
-
-/** 
-* @description The web uses pixels as the main unit while React Native favors density independent pixels. Style properties that involve measurements are specified
-* with unitless 'number' typed variables on RN. Web on the other hand requires strings spcifying the unit. This function aims to bridge that gap and convert 
-* unitless values on the web to pixels by default.
-* @param {String | Number} measure - The style property associated to a meassurement that needs to be converted.
-* @example
-* ```javascript 
-*   const myFlavor: {radius: 3};
-*   toPx(myFlavor.radius); //Returns '3px'
-* ```
-* @returns {Any} - The converted.
-*/
-const toPx = (measure) => {
-    return (typeof measure === 'number') ? measure + 'px' : measure;
 }
 
 /**
@@ -2013,7 +1999,8 @@ export const positionContent = (content) => {
     let longitudinal = 'flex-start';//Positioning in the content direction
     let transversal = 'flex-start'; //Positioning in the cross direction, perpendicular to the content
     let overflow = 'flex-start';    //Positioning of the different rows and columns of content that overflow how are they aligned to each other.
-    let gap = undefined;                    //Gap between content items
+    let gap = undefined;            //Gap between content items
+
     if(content) {
         wrap = (content.wrap ?? true) ? 'wrap' : 'nowrap';
         direction = content.direction ?? 'row';
@@ -2090,40 +2077,40 @@ export const positionContent = (content) => {
 export const oneTheme = {
     oneJS: { //Theme name
         default: { //Flavor name
-            //The idea is to have as few parameters as possible so that all components use these paremeters and you are able to customize them with your own flavor.
-            //E.g. your texts and your inputs use 'textFont, then you are able to create a 'input' flavor to customize only inputs.
-            // primaryColor: '#0077ff', //primary
+            /* Best practice: Try to have as few theme variables as possible to and create as many flavors as needed giving values to these variables.
+               E.g. Rather than creating a color variable for every color in the app, create flavors giving different values to the 'primaryColor'.
+            */
             //Color
-            backgroundColor: '#ffffff',//contrast
-            // neutralColor: '#D9DADC',//#D9DADC #9ba8a7
+            backgroundColor: '#ffffff',
             primaryColor: '#094DFF',
-            neutralColor: '#b1b0c5',//#D9DADC #9ba8a7
+            neutralColor: '#b1b0c5',
             acceptColor:  '#60b33a',
             rejectColor: '#ff5100',
 
             //Text
-            textFont: '"AvenirNextLTPro-Regular", Arial, sans-serif',
-            // textColor: '#666',
+            textFont: 'AvenirNext, Arial, sans-serif',
             textColor: '#666488',
             textSize: '100%',
             textWeight: 'normal',
 
             //Border
-            //Note: 'borderStyle' by default on native is solid and in web is none
             radius: 10,
-            // border: {width: 0, style: 'none', color: 'transparent'}, 
-            borderWidth: 0,
-            borderStyle: 'none',
-            borderColor: 'transparent',
-
-            // iconSize: 32,
-            //potentially remove
-            inputBorderWidth: 1,
-            inputBorderStyle: 'solid',
-            inputBorderColor: '#D9DADC',
-
+            
             //Shadow
             shadow: {elevation: 0},
+        },
+        border: {
+            borderWidth: 1,
+            borderStyle: 'solid',
+            borderColor: '#b1b0c5',
+        },
+        selected: {
+            primaryColor: '#094DFF', //primary color
+            textColor: '#666488',    //text color
+        },
+        unselected: {
+            primaryColor: '#b1b0c5', //neutral color
+            textColor: '#b1b0c5',    //neutral color
         },
         title: {
             // textColor: '#333',

@@ -1,11 +1,13 @@
-import ReactDOM from 'react-dom';
+import ReactDOM from 'react-dom/client';
 
 //Emotion Imports
 import {css} from '@emotion/css';
 
 //Conditional Firestore Import
 var firestore = {};
-import('firebase/firestore').then(module => firestore = module).catch(warning => console.warn("[oneJS]: No Firestore module imported. If this is intentional, please disregard this warning: ", warning))
+import('firebase/firestore').then(module => firestore = module).catch(warning => {
+	//console.warn("[oneJS]: No Firestore module imported. If this is intentional, please disregard this warning: ", warning)
+});
 
 export const OSSPECIFICS = {
 	os: 'web', 

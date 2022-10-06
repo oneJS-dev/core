@@ -11,5 +11,6 @@ export const OSSPECIFICS = {
 	os: 'web', 
 	css: css, 
 	systemLanguage: (window.navigator.userLanguage || window.navigator.language || 'en').substring(0, 2),
-	firestore: firestore
+	firestore: firestore,
+	ReactDOM: ReactDOM
 };

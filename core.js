@@ -1485,7 +1485,7 @@ const EnhancedComponent = (ComponentFunctionOrTag) => ({structure, flavor, style
 * ```
 * @returns {ReactElement} - The complete app component.
 */
-export const AppComponent = ({name, state, theme, style, text, firestore}) => template => {
+export const App = ({name, state, theme, style, text, font, firestore}) => template => {
     ONEJS.appName = name;
     ONEJS.appText = text;
     ONEJS.style = style;
@@ -1508,21 +1508,37 @@ export const AppComponent = ({name, state, theme, style, text, firestore}) => te
         });
 
         const initialized = React.useRef();
-        //Setup url listener for native
+        
         if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') {
+            //Setup url listener for native
             React.useEffect(() => {
                 if(initialized) ONEJS.urlStateVariables.forEach(stateVariable => write(stateVariable.stateId, readUrlData(stateVariable.url), 'url', 'update'));
             }, [ONEJS.reactUrl]);
+            //Setup fonts for native
+            if(font && typeof font === 'object') {
+                let fontRequire = {};   
+                Object.entries(font).forEach(([key, value]) => {fontRequire[key] = font[key]});
+                const [fontsLoaded] = OSSPECIFICS?.useFonts(fontRequire);
+            }
         }
 
         //Sets up the state for the app for the first time
         if(!initialized.current) {
             setupState(state);
-            //Setup url listeners for web
+            
             if(OSSPECIFICS.os === 'web') {
+                //Setup url listeners for web
                 window.addEventListener('urlChange',  (e) => { 
                     ONEJS.urlStateVariables.forEach(stateVariable => write(stateVariable.stateId, readUrlData(stateVariable.url), 'url', 'update'));
                 }, false);
+                //Setup fonts for web
+                if(font) {
+                    let fontStyle = document.createElement('style');
+                    Object.entries(font).forEach(([key, value]) => {
+                        fontStyle.appendChild(document.createTextNode("@font-face {font-family: " + key + "; src: url('" + value + "');}"));
+                    });
+                    document.head.appendChild(fontStyle);
+                }
             }
             initialized.current = true;
         }
@@ -1551,9 +1567,16 @@ export const AppComponent = ({name, state, theme, style, text, firestore}) => te
         document.body.classList.add(OSSPECIFICS.css(bodyStyle));
     }
     
-
+    //Render the app in the appropiate container
     const AppComponent = React.createElement(appFunction, {state: state, template: template},null);
-    return AppComponent;
+    if(os === 'web') {
+        const container = document.getElementById('app');
+        const reactRoot = OSSPECIFICS.ReactDOM.createRoot(container);
+        reactRoot.render(AppComponent);
+    }
+    else {
+        OSSPECIFICS.registerRootComponent(() => AppComponent);
+    }
 }
 
 //=============================================================================

@@ -1581,6 +1581,7 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
         container.style.display = 'flex';
         container.style.flexDirection = 'column';
         container.style.alignContent = 'flex-start';
+        container.style.flexGrow = '1';
         container.style.flexShrink = '0';
 
         const reactRoot = OSSPECIFICS.ReactDOM.createRoot(container);
@@ -1865,7 +1866,7 @@ export const readIconGradient = gradientId => {
 */
 export const generateGradient = ({colors, angle=0, start, end, locations, svgId}) => {
     if(!colors || !Array.isArray(colors) || colors.length < 2) {console.error('generateGradient: "colors" array must contain at least two items');return}
-    if(!locations) locations = colors.map((color, index) => (index / (colors.length - 1)).toFixed(2));
+    if(!locations) locations = colors.map((color, index) => Number((index / (colors.length - 1)).toFixed(2)));
     else if(locations && locations.length !== colors.length) {console.error('generateGradient: "colors" and "locations" arrays must be the same length.');return}
     
     //CSS linear-gradient
@@ -1999,12 +2000,12 @@ export const positionContent = (content) => {
     let longitudinal = 'flex-start';//Positioning in the content direction
     let transversal = 'flex-start'; //Positioning in the cross direction, perpendicular to the content
     let overflow = 'flex-start';    //Positioning of the different rows and columns of content that overflow how are they aligned to each other.
-    let gap = undefined;            //Gap between content items
+    let gap = {};            //Gap between content items
 
     if(content) {
         wrap = (content.wrap ?? false) ? 'wrap' : 'nowrap';
         direction = content.direction ?? 'row';
-        gap = content.gap ?? undefined;
+        gap = content.gap ? {gap: gap} : {}; //Gap property is not yet implemented in React Native: https://github.com/facebook/yoga/issues/812
         longitudinal = direction === 'row' ? content.h ?? 'left' : content.v ?? 'top';  //In the content direction
         transversal  = direction === 'row' ? content.v ?? 'top'  : content.h ?? 'left'; //Transversal to the content direction
 
@@ -2027,7 +2028,7 @@ export const positionContent = (content) => {
         else if(transversal === 'stretch') {transversal = 'stretch'; overflow = 'stretch';} //Stretch: If the transversal dimension is not known, stretches the element. To be able to stretch the element 'align-content' also needs to be set to stretch.
         else {transversal = 'flex-start'; overflow = 'flex-start';}           
     }
-    return {flexDirection: direction, justifyContent: longitudinal, alignItems: transversal, alignContent: overflow, flexWrap: wrap, gap: gap}; 
+    return {flexDirection: direction, justifyContent: longitudinal, alignItems: transversal, alignContent: overflow, flexWrap: wrap, ...gap}; 
 }
 
 /**
@@ -2086,6 +2087,8 @@ export const oneTheme = {
             neutralColor: '#b1b0c5',
             acceptColor:  '#60b33a',
             rejectColor: '#ff5100',
+            lightColor: '#e9e8ee',
+            darkColor: '#4c4b66',
 
             //Text
             textFont: OSSPECIFICS.os === 'web' ? 'Avenir Next, Arial, sans-serif' : OSSPECIFICS.os === 'ios' ? 'Avenir Next' : 'Roboto',
@@ -2327,7 +2330,6 @@ export const oneTheme = {
         flat: {
             shadow: {elevation: 0},
             borderWidth: 0,
-            borderStyle: 'none',
             borderColor: 'transparent',
             radius: 0
         }

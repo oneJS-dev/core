@@ -1,6 +1,8 @@
 /**
- * A functional programming oriented Javascript module. It allows to write your web app or native app using just plain functional vanilla JS.
- * This module provides optional features such as state management, routing, database access/storage and style theming.
+ * A functional programming oriented Javascript module. It allows to write your web app or native 
+ * app using just plain functional vanilla JS.
+ * This module provides optional features such as state management, routing, database access/storage 
+ * and style theming.
  * Internally it leverages the power of React, Emotion and Firestore to provide this functionality.
  * @module oneCore
  */
@@ -8,12 +10,14 @@
 //React Imports. Currently React does not provide ESM modules but UMD
 import React from 'react';
 
-// //Web vs Native specific differences
+//Web vs Native specific differences
 import {OSSPECIFICS} from '@onejs-dev/core/osSpecifics/osSpecifics';
 
 //Conditionally import Firestore
 if(OSSPECIFICS.firestore) {
-   var {doc, collection, addDoc, setDoc, getDoc, deleteDoc, getDocs, onSnapshot} = OSSPECIFICS.firestore;
+    var {
+        doc, collection, addDoc, setDoc, getDoc, deleteDoc, getDocs, onSnapshot
+    } = OSSPECIFICS.firestore;
 }
 
 /**
@@ -34,18 +38,17 @@ var ONEJS = {
     //State Module
     reactState: [],            //All the React variables part of the 'useState' hook
     reactSetState: [],         //All the React methods to set the state part of the 'useState' hook
-    url: {},              //The current url for the app for React Native
-    setUrl: {},           //The set method for the url 'useState' hook
-    urlStateVariables: [],     //The ids of the state variables that need to be updated on url changes 
-    currentState: {},          //Current state of the app, containing the value of all state variables
+    url: {},                   //The current url for the app for React Native
+    setUrl: {},                //The set method for the url 'useState' hook
+    urlStateVariables: [],     //The ids of the state variables to be updated on url changes 
+    currentState: {},          //Current state of the app, contains the value of all state variables
     stateHistory: [],          //The history of modifications performed to the state
-    stateHistorySize: 10,      //Maximum length for the stateHistory array. Limits the amout of modifications stored
+    stateHistorySize: 10,      //Maximum length for the stateHistory array. Limits the amount of modifications stored
     stateHistoryPosition: 0,   //Newest (current) state position is 0. Rewinding the state this value can be changed 
-    fontsLoaded: false,        //Indicates whether custom fonts have been loaded to enable first render. Only for RN
+    fontsLoaded: false,        //Whether custom fonts have been loaded to enable first render. RN
 
     //Components Module    
-    memoizedComponents: [],    //React component structure is stored in this array using the name as index
-    emotionCSSClasses: [],     //CSS classes compiled by emotion to avoid calling css() method on every state update
+    memoizedComponents: [],    //React components are stored in this array using the name as index
 
     //App Module
     appName: '',               //Name of the app. Used by indexedDB to avoid naming collisions
@@ -53,45 +56,46 @@ var ONEJS = {
     os: window ? 'web' : (global ? 'native' : undefined),//Current operating system for the app
     theme: {default: {}},      //Theme variable values for the different flavors
     style: {},                 //Object containing all the different styles for the app
-    iconGradients: new Map(),  //Stores the relation between the CSS or native gradient and the SVG gradient
+    iconGradients: new Map(),  //Stores the relation between the CSS/native gradient and the SVG one
 };
 
 
-//=============================================================================
-// LANGUAGE SETUP: All the app strings can be saved into a configuration
-// object containing the different translations for the languages supported.
-// The language module aims to simplify translation of the app when the user
-// switches to a different language.
-//=============================================================================
+//==================================================================================================
+// LANGUAGE SETUP: All the app strings can be saved into a configuration object containing the 
+// different translations for the languages supported.
+// The language module aims to simplify translation of the app when the user switches to a 
+// different language.
+//==================================================================================================
 
 /** 
 * @description Retrieves the user's local language based on the navigator configuration.
 * @returns {String} Returns the user's local language.
 */
 export const getLanguage = () => {
-    const localLanguage = localStorage.getItem('oneLanguage'); //Maybe concatenate app name provided in app().
+    const localLanguage = localStorage.getItem('oneLanguage' + ONEJS.appName ?? '');
     const userLanguage = OSSPECIFICS.userLanguage;
     return localLanguage ?? userLanguage;
-}
+};
 /** 
 * @description Sets the language defined by the user.
 * @param {String} languageISOCode - Chosen language in ISO format.
 */
 export const setLanguage = (languageISOCode) => {
-    localStorage.setItem('oneLanguage', languageISOCode);
-}
+    localStorage.setItem('oneLanguage' + ONEJS.appName ?? '', languageISOCode);
+};
 /** 
 * @description It is used to update the value of the language on user input change events.
 * Use-case: Call function oninput or onchange events on the template.
 * @param {Object} event - User event containing the target value to update the language.
 * * @example
 * ```javascript
-* input({onchange: updateLanguage});//Everytime time the input changes updates the value of 'event' and therefore the language
+* input({onchange: updateLanguage}); //Every time time the input changes updates the value of 
+*       //'event' and therefore the language
 * ```
 */
 export const updateLanguage = (event) => {
     if(event?.target) setLanguage(event.target?.value);
-}
+};
 /** 
 * @description Reads the text for a certain language based on the text id. 
 * Prerequisites: Define all the texts in a single object and provide it as the "text" parameter to the app() function.
@@ -111,14 +115,14 @@ export const updateLanguage = (event) => {
 * @todo  Create website to send JS object with text configuration: {home: 'home', button: 'your input'} and return {home: {en: 'home', es: 'casa'}, 
 * button: {en: 'your input', es: 'su input'}}. Use a translator API.
 */
-export const readText = (id, language=getLanguage()) => {
+export const readText = (id, language = getLanguage()) => {
     if(!ONEJS.appText) {console.error('The text has not been setup in the app function.'); return;}
     if(!ONEJS.appText[id]) {console.error('No such id: ' + id); return;}
     if(language && !ONEJS.appText[id][language]) {console.error('No such language: ' + language); return;}
 
     if(typeof ONEJS.appText[id] === 'string') return ONEJS.appText[id];
     return ONEJS.appText[id][language];//TODO: If not retrieved for a certain language automatically translate
-}
+};
 
 //=============================================================================
 // ROUTING SETUP: Internal methods to provide routing functionality for web.
@@ -155,17 +159,19 @@ export const readText = (id, language=getLanguage()) => {
 export const matchUrl = (url) => {
     if(!url) return false;
     //Filter added to remove the empty strings after split. E.g.: Root path is "/" and split converts to ['', '']. Filter turns into []
-    const actualUrlString = OSSPECIFICS.os === 'web' ? decodeURI(location.pathname + location.search) : ONEJS.url;
+    const actualUrlString = OSSPECIFICS.os === 'web' ?
+        decodeURI(location.pathname + location.search) : ONEJS.url;
     const actualUrl = actualUrlString.split('/').filter(Boolean); //this url will always start with '/'
     const targetUrl = url.split('/').filter(Boolean);
-    if(targetUrl.length - actualUrl.length > 1 || (targetUrl.length - actualUrl.length === 1 && targetUrl[targetUrl.length-1] !== '*')) return false;
+    if(targetUrl.length - actualUrl.length > 1 || (targetUrl.length - actualUrl.length === 1 &&
+        targetUrl[targetUrl.length - 1] !== '*')) return false;
     //Return false if the target url does not match at any stage
-    for (let i = 0; i < actualUrl.length; i++) {
+    for(let i = 0; i < actualUrl.length; i++) {
         if(i === targetUrl.length - 1 && targetUrl === '*') return true;
         if(actualUrl[i] !== targetUrl[i] && targetUrl[i] !== '*') return false;
     }
     return true;
-}
+};
 
 /** 
 * @description If the url matches the current path, returns the value from the segment with ':'.
@@ -182,23 +188,24 @@ export const matchUrl = (url) => {
 * ```
 * @returns {String} Returns the value from the segment with ':'.
 */
-const readUrlData = url => {        
+const readUrlData = url => {
     if(typeof url !== 'string') return;         //If not a string return undefined. This allows '' as a possible url.
     const urlToMatch = url.replace(':', '*');   //The url without the data ':' segments
     if(!matchUrl(urlToMatch)) {
         if(urlToMatch === url) return false;    //If the url does not match returns false (does not contain : segments)
-        return; 
-    } 
+        return;
+    }
     else if(urlToMatch === url) return true;    //If the url does not contain a data ':' segment, return true if the url matches
     //Matches and contains ':' segments
-    const actualUrlString = OSSPECIFICS.os === 'web' ? decodeURI(location.pathname + location.search) : ONEJS.url;
+    const actualUrlString = OSSPECIFICS.os === 'web' ?
+        decodeURI(location.pathname + location.search) : ONEJS.url;
     const actualUrl = actualUrlString.split('/').filter(Boolean);
     const targetUrl = url.split('/').filter(Boolean);
     for(let i = 0; i < targetUrl.length; i++) {
         if(targetUrl[i] === ':') return actualUrl[i];
     }
     return;
-}
+};
 
 /**
 * @typedef  {Object}  Url - The configuration structure required by urlSetup function. It enables displaying or hiding the View based on the url, adding an
@@ -233,28 +240,30 @@ const readUrlData = url => {
 * ```
 */
 const setupUrl = (url) => component => { //Setup animation on property changes
-    const touchEvent = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0)) ? 'press' : 'click';
+    const touchEvent = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) ||
+        (navigator.msMaxTouchPoints > 0)) ? 'press' : 'click';
 
     //If url is of type link. Redirects to the linked address
     //If a link does not start with '/', it gets appended to the last part of the url (relative). 
     //If starts with '/', it replaces from the root (absolute).
     if(typeof url === 'string') {
         component.addEventListener(touchEvent, async (e) => {
-            e.preventDefault(); 
+            e.preventDefault();
             if(matchUrl(url)) return; //If the current url matches the target url do nothing (avoid changing url)
             window.history.pushState(null, null, url); //data, title, url
             window.dispatchEvent(new CustomEvent('urlChange', {detail: url}));
         });
         if(!window.onpopstate) { //Popstate gets activated when pressing next or back buttons on the browser or calling history.back() history.go()
             window.onpopstate = (e) => {
-                window.dispatchEvent(new CustomEvent('urlChange', {detail: decodeURI(location.pathname + location.search)}));
+                window.dispatchEvent(new CustomEvent('urlChange',
+                    {detail: decodeURI(location.pathname + location.search)}));
             };
         }
-    }  
-}
+    }
+};
 
 /** 
-* @description Reads the current url to set the corresopnding state variable. Subscribes to url changes.
+* @description Reads the current url to set the corresop>nding state variable. Subscribes to url changes.
 * Naming: '*' represents any value for a given segment. ':' represents the segment to extract the data from.
 * Use case: Update the value of a state variable that uses url as source
 * @param {String} url - The url to extract data from.
@@ -273,13 +282,15 @@ const setupUrl = (url) => component => { //Setup animation on property changes
 const readUrl = (url) => (stateId) => {
     write(stateId, readUrlData(url), 'url', 'update');
     ONEJS.urlStateVariables.push({url: url, stateId: stateId});
-}
+};
 
 /** 
 * @description Updates the url state variable for React Native apps.
 * Naming convention:
-*   - If the url starts with '/' it will be taken as an absolute path and the actual url will be fully replaced.
-*   - If the url starts with './' or no '/' it will be taken as a relative path and will be appended to the actual url.
+*   - If the url starts with '/' it will be taken as an absolute path and the actual url will be 
+*     fully replaced.
+*   - If the url starts with './' or no '/' it will be taken as a relative path and will be 
+*     appended to the actual url.
 * @param {String} url - The new url to update the current url.
 * @example
 * Internal Function Call:
@@ -298,14 +309,18 @@ const updateUrl = url => {
     else if(url.slice(0, 2) === './') finalUrl = finalUrl + url.slice(2 - url.length);
     else finalUrl = finalUrl + url;
     ONEJS.setUrl(finalUrl);
-}
+};
 
 /** 
-* @description Reads a database path with state variables '<stateId>'. The '<stateId>' variable holds the ID for the database item. 
-* Use case: Return data from the database for a specific item. The <stateId> variable should only be used at document level, even if it may work at collection level.
+* @description Reads a database path with state variables '<stateId>'. The '<stateId>' variable 
+* holds the ID for the database item. 
+* Use case: Return data from the database for a specific item. The <stateId> variable should only be 
+*           used at document level, even if it may work at collection level.
 * Naming: '<stateId>' represents the variable to be replaced with the value.
-* Note: The function name says 'Path' rather than 'Url' since it reads both database paths and DOM http url.
-* Note: Discriminants have been used '< >' as the stateId encoding character since they are not allowed in regular http urls.
+* Note: The function name says 'Path' rather than 'Url' since it reads both database paths and DOM 
+*       http url.
+* Note: Discriminants have been used '< >' as the stateId encoding character since they are not 
+*       allowed in regular http urls.
 * @param {String} path - The path to read <stateId> from.
 * @example
 * ```javascript 
@@ -321,11 +336,12 @@ const readPathWithState = (path) => {
     //Path Includes State Variable
     if(finalPath.includes('<') && finalPath.includes('>')) {
         const stateId = (path.split('<')[1]).split('>')[0]; //Returns the stateId from in between the '<' '>' characters.
-        if(read(stateId) != null) finalPath = finalPath.replace('<' + stateId + '>', read(stateId).toString());
+        if(read(stateId) != null) finalPath = finalPath.replace('<' + stateId + '>',
+            read(stateId).toString());
         else return;//Returns undefined so that 'source/storage' functions avoid reading/writing from/to database
     }
     return finalPath;
-}
+};
 
 //=============================================================================
 // FIREBASE SETUP: This is an optional module that allows the user to work with
@@ -359,21 +375,21 @@ const firestoreGetDataOnce = async (path, stateId) => {
         const docRef = doc(ONEJS.firestore, readPathWithState(path));
         try {
             const docSnap = await getDoc(docRef);
-            if(docSnap.exists()) {write(stateId, docSnap.data(), 'firestore', 'update');} 
+            if(docSnap.exists()) {write(stateId, docSnap.data(), 'firestore', 'update');}
             else {console.error("No such document!");}//doc.data() will be undefined in this case
         }
-        catch (error) {console.error("Error getting document:", error);}
+        catch(error) {console.error("Error getting document:", error);}
     }
     else {
         const collRef = collection(ONEJS.firestore, readPathWithState(path));
-        try {                    
+        try {
             const collSnap = await getDocs(collRef);//doc.data() is never undefined for query doc snapshots
             const result = [];
-            collSnap.forEach((doc) => {result.push({...{id:doc.id}, ...doc.data()})});//Adding the id to the result array for each document
+            collSnap.forEach((doc) => {result.push({...{id: doc.id}, ...doc.data()});});//Adding the id to the result array for each document
             write(stateId, result, 'firestore', 'update');
-        } catch (error) {console.error("Error reading snapshot: ", error);}                
-    }         
-}
+        } catch(error) {console.error("Error reading snapshot: ", error);}
+    }
+};
 
 /** 
 * @description Reads a document or collection of documents from Firestore database and sets the corresponding state variable.
@@ -394,36 +410,40 @@ const firestoreGetDataOnce = async (path, stateId) => {
 * ``` 
 * @todo Discarded idea: Besides @stateId, we could also implement :, to combine and retrieve the value for both the state and url data. (Creates confusion as paths and urls are not the same)
 */
-const firestoreRead = (path) => (stateId, context='') => {
+const firestoreRead = (path) => (stateId, context = '') => {
     if(context === 'firestore') return;
     if(!path) return;
     else if(path.includes('@') && context === 'initialize') {//Subscribes for state changes during 'setupState' initialization
-        window.addEventListener(readStateId(path) + 'stateChange',  async (e) => {firestoreGetDataOnce(path, stateId);}, false);//Called on state updates
+        window.addEventListener(readStateId(path) + 'stateChange',
+            async (e) => {firestoreGetDataOnce(path, stateId);}, false);//Called on state updates
         firestoreGetDataOnce(path, stateId);//Pulls data once for the first time
     }
-    else if(context === 'initialize'){//Subscribe to firestore updates using 'onSnapshot'
+    else if(context === 'initialize') {//Subscribe to firestore updates using 'onSnapshot'
         //If the path is even, Firestore DOCUMENT is retrieved
         if(path.split('/').length % 2 === 0) {
-            try {const unsubscribe = onSnapshot(doc(ONEJS.firestore, path), (doc) => {write(stateId, doc.data(), 'firestore', 'update');});}
-            catch (error) {console.error("Error reading snapshot: ", error);}
+            try {
+                const unsubscribe = onSnapshot(doc(ONEJS.firestore, path),
+                    (doc) => {write(stateId, doc.data(), 'firestore', 'update');});
+            }
+            catch(error) {console.error("Error reading snapshot: ", error);}
         }
         //If the path is odd, Firestore COLLECTION is retrieved (list of documents within a collection)
         else {
             try {
                 const unsubscribe = onSnapshot(collection(ONEJS.firestore, path), (snapshot) => {
                     const result = [];
-                    snapshot.forEach((doc) => {result.push({...{id:doc.id}, ...doc.data()})});  //Adding the id to the result array for each document
+                    snapshot.forEach((doc) => {result.push({...{id: doc.id}, ...doc.data()});});  //Adding the id to the result array for each document
                     write(stateId, result, 'firestore', 'update'); //If storage is also set we will run into conflicts
                 });
-            } catch (error) {console.error("Error reading snapshot: ", error);}
+            } catch(error) {console.error("Error reading snapshot: ", error);}
         }
-    } 
+    }
     else {  // Called for paths with state variables and stateId with source and storage. In these cases when the write function updates the stateId, since data
-            // is not synced with 'onSnapshot', the 'source' function is called to pull the just stored data again from the database.
-            // This is required since adding new data to the database generates a new id that needs to be retrieved for the app.
+        // is not synced with 'onSnapshot', the 'source' function is called to pull the just stored data again from the database.
+        // This is required since adding new data to the database generates a new id that needs to be retrieved for the app.
         firestoreGetDataOnce(path, stateId);
-    }     
-}
+    }
+};
 
 /** 
 * @description Writes a document to Firestore database. For document paths, updates the document value. For collections, pushes document to collection.
@@ -446,18 +466,25 @@ const firestoreRead = (path) => (stateId, context='') => {
 const firestoreWrite = (path) => async (data, context = '', documentId) => {
     if(context === 'firestore') return;//This means firestore has read a value and is updating the state, no need to write to the database 
     if(!path) return;
-    const finalPath = documentId != null ? readPathWithState(path).concat('/', documentId.toString()) : readPathWithState(path);
+    const finalPath = documentId != null ?
+        readPathWithState(path).concat('/', documentId.toString()) : readPathWithState(path);
     //If the path is even, modify the document
     if(finalPath.split('/').length % 2 === 0) {
-        try {const docRef = await setDoc(doc(ONEJS.firestore, finalPath), {...{timestamp: new Date().getTime()}, ...data});}
-        catch(error) {console.error("Error writing document: ", error);} 
+        try {
+            const docRef = await setDoc(doc(ONEJS.firestore, finalPath),
+                {...{timestamp: new Date().getTime()}, ...data});
+        }
+        catch(error) {console.error("Error writing document: ", error);}
     }
-    //If the path is odd, push document to collection. The id is automatically generade by firestore in the database
+    //If the path is odd, push document to collection. The id is automatically generate by firestore in the database
     else {
-        try {const docRef = await addDoc(collection(ONEJS.firestore, finalPath), {...{timestamp: new Date().getTime()}, ...data});}
+        try {
+            const docRef = await addDoc(collection(ONEJS.firestore, finalPath),
+                {...{timestamp: new Date().getTime()}, ...data});
+        }
         catch(error) {console.error("Error purshing to collection: ", error);}
     }
-}
+};
 /** 
 * @description Removes a document from the Firestore database. It can remove collections of documents but it is strongly not advised.
 * Naming: Even number of segments in path for documents or even for collections (group of documents)
@@ -472,11 +499,12 @@ const firestoreWrite = (path) => async (data, context = '', documentId) => {
 */
 const firestoreRemove = (path) => async (documentId) => {
     if(!path) return;
-    const finalPath = documentId != null ? readPathWithState(path).concat('/', documentId.toString()) : readPathWithState(path);
+    const finalPath = documentId != null ?
+        readPathWithState(path).concat('/', documentId.toString()) : readPathWithState(path);
     //If the path is even, remove the document
     if(finalPath.split('/').length % 2 === 0) {
         try {const docRef = await deleteDoc(doc(ONEJS.firestore, finalPath));}
-        catch(error) {console.error("Error removing document: ", error);} 
+        catch(error) {console.error("Error removing document: ", error);}
     }
     //If the path is odd, delete entire collection
     else {
@@ -484,12 +512,13 @@ const firestoreRemove = (path) => async (documentId) => {
         //retrieve all the documents within the collection or subcollection and delete them
         //Deleting collections from a Web client is not recommended.
         const collRef = collection(ONEJS.firestore, readPathWithState(path));
-        try {                    
+        try {
             const collSnap = await getDocs(collRef);
-            collSnap.forEach(async docData => await deleteDoc(doc(ONEJS.firestore, finalPath + '/' + docData.id)));
-        } catch (error) {console.error("Error reading snapshot: ", error);}  
-    }    
-}
+            collSnap.forEach(async docData => await deleteDoc(doc(ONEJS.firestore,
+                finalPath + '/' + docData.id)));
+        } catch(error) {console.error("Error reading snapshot: ", error);}
+    }
+};
 
 
 //=============================================================================
@@ -528,20 +557,23 @@ const firestoreRemove = (path) => async (documentId) => {
 *   path = events/@eventId  //Replaces @eventId (calling readPathWithState) with state variable value and returns event object
 * ``` 
 */
-const indexedDBRead = (path) => (stateId, context='') => {
+const indexedDBRead = (path) => (stateId, context = '') => {
     if(context === 'indexedDB') return;
     if(!path) return;
     if(path.includes('@') && context === 'initialize') {//Subscribes for state changes during 'setupState' initialization
-        window.addEventListener(readStateId(path) + 'stateChange',  async (e) => {//Note: e.detail also contains the newState
+        window.addEventListener(readStateId(path) + 'stateChange', async (e) => {//Note: e.detail also contains the newState
             if(!read(readStateId(path))) return;//If the state is not defined return.
             const pathSegments = readPathWithState(path).split('/').filter(Boolean);
             try {
                 const transaction = ONEJS.idb.transaction(pathSegments[0], 'readonly');
                 const store = transaction.objectStore(pathSegments[0]);
-                const request = pathSegments.length > 1 ? store.get(pathSegments[1]) : store.getAll();//Depending of path segments, read entire collection or specific document
-                request.onsuccess = function(data) {write(stateId, request.result, 'indexedDB', 'update');};
+                const request = pathSegments.length > 1 ? 
+                store.get(pathSegments[1]) : store.getAll();//Depending of path segments, read entire collection or specific document
+                request.onsuccess = function(data) {
+                    write(stateId, request.result, 'indexedDB', 'update');
+                };
                 request.onerror = function(e) {console.error('Error: ', e.target.error.name);};
-            } 
+            }
             catch(error) {console.error("Error getting document:", error);}
         }, false);
     }
@@ -556,7 +588,7 @@ const indexedDBRead = (path) => (stateId, context='') => {
         request.onerror = function(e) {console.error('Error: ', e.target.error.name);};
     }
     catch(error) {console.error("Error getting document:", error);}
-} 
+};
 /** 
 * @description Writes a document to indexedDB database. For document paths, updates the document value. For collections, pushes document to collection.
 * Naming: 2 number of segments in path for documents or 1 for collections (group of documents). As opposed to firebase, there are no nested collections.
@@ -575,8 +607,8 @@ const indexedDBRead = (path) => (stateId, context='') => {
 *                                            //Replaces @collection with state variable value and adds a new document to the collection.
 *   path = events/@eventId;  data = {event}; //Replaces @eventId (calling readPathWithState) with state variable value and updates document with {event}
 * ```
-*/   
-const indexedDBWrite = (path) => (data, context='', documentId) => {
+*/
+const indexedDBWrite = (path) => (data, context = '', documentId) => {
     if(context === 'indexedDB') return;
     if(!path) return;
     const pathSegments = readPathWithState(path).split('/').filter(Boolean);
@@ -590,9 +622,9 @@ const indexedDBWrite = (path) => (data, context='', documentId) => {
         //Due to the { keyPath: "id", autoIncrement: true } configuration .put() function does not need the document id, it needs to be contained in the data object
         const request = pathSegments.length > 1 ? store.put(data) : store.add(data);//To add to collection or update document
         request.onerror = function(e) {console.error('Error: ', e.target.error.name);};
-    } 
+    }
     catch(error) {console.error("Error writing document:", error);}
-}
+};
 /** 
 * @description Removes a document or collection of documents from the indexedDB database.
 * Naming: 2 number of segments in path for documents or 1 for collections (group of documents). As opposed to firebase, there are no nested collections.
@@ -613,11 +645,12 @@ const indexedDBRemove = (path) => (documentId) => {
     try {
         const transaction = ONEJS.idb.transaction(pathSegments[0], 'readwrite');
         const store = transaction.objectStore(pathSegments[0]);
-        const request = pathSegments.length > 1 ? store.delete(parseInt(pathSegments[1])) : store.clear();//To remove entire collection or specific document
+        const request = pathSegments.length > 1 ? 
+        store.delete(parseInt(pathSegments[1])) : store.clear();//To remove entire collection or specific document
         request.onerror = function(e) {console.error('Error: ', e.target.error.name);};
-    } 
+    }
     catch(error) {console.error("Error removing document:", error);}
-}
+};
 
 //=============================================================================
 // LOCAL STORAGE: This is an optional module that allows the user to work
@@ -648,14 +681,14 @@ const indexedDBRemove = (path) => (documentId) => {
 * ```
 */
 const localStorageRead = (path) => (stateId) => {
-    try {        
+    try {
         const jsonValue = localStorage.getItem(path); //Note that variable paths are not accepted here. Virtually no use-case for this.
         if(jsonValue === null) return;                //The Web Storage Specification requires that .getItem() returns null for an unknown key
         const data = JSON.parse(jsonValue);           //Using JSON.parse and stringify() allows to store non-string data.
         write(stateId, data, 'localStorage', 'update');
-    } 
+    }
     catch(error) {console.error("Error getting document:", error);}
-}
+};
 /** 
 * @description Writes a document to localStorage.
 * Naming: It is a flat structure, there are no collections.
@@ -667,15 +700,15 @@ const localStorageRead = (path) => (stateId) => {
 * ```javascript 
 *   path = 'userData'; data = {id: '123', name: 'user'}; //Pushes {data} in 'userData' document
 * ```
-*/  
-const localStorageWrite = (path) => (data, context ='') => {
+*/
+const localStorageWrite = (path) => (data, context = '') => {
     if(context === 'localStorage') return;
     try {
-        const jsonData = JSON.stringify(data)
+        const jsonData = JSON.stringify(data);
         localStorage.setItem(path, jsonData);
-    } 
-    catch (error) {console.error("Error setting document:", error);} 
-}
+    }
+    catch(error) {console.error("Error setting document:", error);}
+};
 /** 
 * @description Removes a document from localStorage.
 * Naming: It is a flat structure, there are no collections.
@@ -688,9 +721,9 @@ const localStorageWrite = (path) => (data, context ='') => {
 const localStorageRemove = (path) => () => {
     try {
         localStorage.removeItem(path);
-    } 
+    }
     catch(error) {console.error("Error removing document:", error);}
-}
+};
 
 //=============================================================================
 // NATIVE STORAGE: This is an optional module that allows the user to work
@@ -718,14 +751,14 @@ const localStorageRemove = (path) => () => {
 * ```
 */
 const nativeStorageRead = (path) => async (stateId) => {
-    try { 
+    try {
         const jsonValue = await OSSPECIFICS.AsyncStorage.getItem(path);   //Note that variable paths are not accepted here. Virtually no use-case for this.
         if(jsonValue === null) return;                      //The Async Storage Specification requires that .getItem() returns null for an unknown key
         const data = JSON.parse(jsonValue);                   //Using JSON.parse and stringify() allows to store non-string data.
         write(stateId, data, 'AsyncStorage', 'update');
-    } 
+    }
     catch(error) {console.error("Error getting document:", error);}
-}
+};
 /** 
 * @description Writes a document to AsyncStorage.
 * Naming: It is a flat structure, there are no collections.
@@ -737,15 +770,15 @@ const nativeStorageRead = (path) => async (stateId) => {
 * ```javascript 
 *   path = 'userData'; data = {id: '123', name: 'user'}; //Pushes {data} in 'userData' document
 * ```
-*/  
-const nativeStorageWrite = (path) => async (data, context ='') => {
+*/
+const nativeStorageWrite = (path) => async (data, context = '') => {
     if(context === 'AsyncStorage') return;
     try {
         const jsonData = JSON.stringify(data);
         await OSSPECIFICS.AsyncStorage.setItem(path, jsonData);
-    } 
-    catch (error) {console.error("Error setting document:", error);} 
-}
+    }
+    catch(error) {console.error("Error setting document:", error);}
+};
 
 /** 
 * @description Removes a document from AsyncStorage.
@@ -759,9 +792,9 @@ const nativeStorageWrite = (path) => async (data, context ='') => {
 const nativeStorageRemove = (path) => async () => {
     try {
         await OSSPECIFICS.AsyncStorage.removeItem(path);
-    } 
+    }
     catch(error) {console.error("Error removing document:", error);}
-}
+};
 
 //=============================================================================
 // STATE: The state represents the mutable dimension of the app. Following a pure
@@ -792,12 +825,12 @@ const nativeStorageRemove = (path) => async () => {
 *   const template = () => Text()('Hello ' + read('toWhom') + '!');
 * ```
 * @returns {String} Returns the value for the corresponding state variable.
-*/ 
+*/
 export const read = (stateId) => {
     // return ONEJS.reactState[stateId];//Not reading from React directly as writing the state takes some time and when read is called the value is not updated.
     // return ONEJS.currentState[stateId] != null ? ONEJS.currentState[stateId].value : undefined;
     return ONEJS.currentState[stateId]?.value;
-}
+};
 
 /** 
 * @description Internal function to modify the state. It is the only function able to access and modify the state.
@@ -811,19 +844,20 @@ export const read = (stateId) => {
 * ```javascript 
 *   write('events', {id: '123', name: {'party'}}, 'app', 'arrayUpdate', '123');
 * ```
-*/ 
-const write = (stateId, newValue, context = '', action='update', documentId) => {
+*/
+const write = (stateId, newValue, context = '', action = 'update', documentId) => {
     const oldValue = ONEJS.currentState[stateId].value;
     if(oldValue === newValue) return;
-    
+
     if(action === 'add') {//Adds value to array state variable
         ONEJS.currentState[stateId].value.push(newValue);
-        ONEJS.reactSetState[stateId]([... ONEJS.currentState[stateId].value]);//We need to clone the array with the spread syntax, otherwise leads to unexpected behaviour.
+        ONEJS.reactSetState[stateId]([...ONEJS.currentState[stateId].value]);//We need to clone the array with the spread syntax, otherwise leads to unexpected behaviour.
     }
     else if(action === 'remove') {
         if(documentId != null) {//Remove value from array state variable
-            ONEJS.currentState[stateId].value.splice(ONEJS.currentState[stateId].value.findIndex(doc => doc.id === documentId), 1);
-             ONEJS.reactSetState[stateId]([... ONEJS.currentState[stateId].value]);
+            ONEJS.currentState[stateId].value.splice(ONEJS.currentState[stateId].value.findIndex(
+                doc => doc.id === documentId), 1);
+            ONEJS.reactSetState[stateId]([...ONEJS.currentState[stateId].value]);
         }
         else {//Remove the value from the state variable
             newValue = Array.isArray(oldValue) ? [] : undefined;
@@ -832,8 +866,9 @@ const write = (stateId, newValue, context = '', action='update', documentId) => 
         }
     }
     else if(action === 'updateArray') {//Update value from array state variable
-        ONEJS.currentState[stateId].value[ONEJS.currentState[stateId].value.findIndex(doc => doc.id === documentId)] = newValue;
-        ONEJS.reactSetState[stateId]([... ONEJS.currentState[stateId].value]);
+        ONEJS.currentState[stateId].value[ONEJS.currentState[stateId].value.findIndex(
+            doc => doc.id === documentId)] = newValue;
+        ONEJS.reactSetState[stateId]([...ONEJS.currentState[stateId].value]);
     }
     else if(action === 'update') {//Update value from state variable
         ONEJS.currentState[stateId].value = newValue;
@@ -841,15 +876,20 @@ const write = (stateId, newValue, context = '', action='update', documentId) => 
     }
     else return;
 
-    if(context === 'stateHistory') return;//If the context is 'stateHistory' do not perform any actions on thre database
+    if(context === 'stateHistory') return;//If the context is 'stateHistory' do not perform any actions on the database
     saveState(stateId, oldValue, ONEJS.currentState[stateId].value, context, action, documentId);//Save the state configuration delta to be able to track the history of the state
 
-    if(ONEJS.currentState[stateId].removal && action === 'remove') ONEJS.currentState[stateId].removal(documentId);
-    if(ONEJS.currentState[stateId].storage && action !== 'remove') ONEJS.currentState[stateId].storage(newValue, context, documentId);//Context checks if the source path is equal to the target path to avoid calling storage innecessarity
-    if(ONEJS.currentState[stateId].onChange) ONEJS.currentState[stateId].onChange(oldValue, newValue, stateId);//Called to performe additional actions on change
-    if(ONEJS.currentState[stateId].alert) window.dispatchEvent(new CustomEvent(stateId + 'stateChange', {detail: newValue}));//Called when the state variable is required to alert when changes by other state var. E.g.: user: /users/@userId, userID: '1234' (watched variable)
-    if(ONEJS.currentState[stateId].source && action === 'add') ONEJS.currentState[stateId].source(stateId, context);//When adding a new document into a collection, source is called to retrieve from the database the id for the recently added document.
-}
+    if(ONEJS.currentState[stateId].removal && action === 'remove')
+        ONEJS.currentState[stateId].removal(documentId);
+    if(ONEJS.currentState[stateId].storage && action !== 'remove')
+        ONEJS.currentState[stateId].storage(newValue, context, documentId);//Context checks if the source path is equal to the target path to avoid calling storage innecessarity
+    if(ONEJS.currentState[stateId].onChange)
+        ONEJS.currentState[stateId].onChange(oldValue, newValue, stateId);//Called to perform additional actions on change
+    if(ONEJS.currentState[stateId].alert)
+        window.dispatchEvent(new CustomEvent(stateId + 'stateChange', {detail: newValue}));//Called when the state variable is required to alert when changes by other state var. E.g.: user: /users/@userId, userID: '1234' (watched variable)
+    if(ONEJS.currentState[stateId].source && action === 'add')
+        ONEJS.currentState[stateId].source(stateId, context);//When adding a new document into a collection, source is called to retrieve from the database the id for the recently added document.
+};
 
 /** 
 * @description External function to modify the state. Adds a new value into the state variable array and saves it in the storage.
@@ -863,13 +903,14 @@ const write = (stateId, newValue, context = '', action='update', documentId) => 
 *   const template = () => [Input({ type: 'text, onInput: add('events') })];
 *   const template = () => [Button({ onClick: (e) => add('events')({id: '123', name: {'party'}}) })]; 
 * ```
-*/ 
+*/
 export const add = (stateId) => event => {
-    const newValue = (event?.target) ? (event.target.type === 'checkbox' ? event.target.checked : event.target.value) : event;
+    const newValue = (event?.target) ?
+        (event.target.type === 'checkbox' ? event.target.checked : event.target.value) : event;
     const context = 'app';//External context
     const action = 'add';
     write(stateId, newValue, context, action);
-}
+};
 
 /** 
 * @description External function to modify the state. Updates the value of state variables on input change events and saves it in the storage.
@@ -881,17 +922,18 @@ export const add = (stateId) => event => {
 * @param {*} event - The event containing the value or the value itself.
 * @example
 * ```javascript 
-*   const template = () => [Input({ type: 'text, onInput: update('userId') })]; //Everytime the input changes updates the value of 'user'
-*   const template = () => [Button({ onClick: (e) => update('events', '123')({name: 'new party'}) })]; //Everytime is clicked sets the same value
+*   const template = () => [Input({ type: 'text, onInput: update('userId') })]; //Every time the input changes updates the value of 'user'
+*   const template = () => [Button({ onClick: (e) => update('events', '123')({name: 'new party'}) })]; //Every time is clicked sets the same value
 * ```
 */
 export const update = (stateId, documentId) => (event) => {
     // if(typeof constValue !== 'undefined') write(stateId, constValue);//For the moment not adding this option update = (stateId, constValue) => (event), it is anti-pattern
-    const newValue = (event?.target) ? (event.target.type === 'checkbox' ? event.target.checked : event.target.value) : event;
+    const newValue = (event?.target) ?
+        (event.target.type === 'checkbox' ? event.target.checked : event.target.value) : event;
     const context = 'app';//External context
     const action = documentId != null ? 'updateArray' : 'update';//Set the value within an array or update the value entirely
     write(stateId, newValue, context, action, documentId);
-}
+};
 
 /** 
 * @description External function to modify the state. Removes the value from the state variable on input change events and saves it in the storage.
@@ -900,16 +942,16 @@ export const update = (stateId, documentId) => (event) => {
 * @param {String} documentId - If the state is an array of objects, corresponds to the {id} property within the object to be matched.
 * @example
 * ```javascript 
-*   const template = () => [Button({ onClick: (e) => remove('userId') })]; //Everytime is clicked sets 'userId' to undefined
-*   const template = () => [Button({ onClick: (e) => remove('events', '123') })]; //Everytime removes event '123' from the 'events' array
+*   const template = () => [Button({ onClick: (e) => remove('userId') })]; //Every time is clicked sets 'userId' to undefined
+*   const template = () => [Button({ onClick: (e) => remove('events', '123') })]; //Every time removes event '123' from the 'events' array
 * ```
 */
-export const remove = (stateId, documentId) => { 
+export const remove = (stateId, documentId) => {
     const newValue = undefined;
     const context = 'app';//External context
     const action = 'remove';//Set the value within an array or update the value entirely
     write(stateId, newValue, context, action, documentId);
-}
+};
 
 /**
 * @typedef  {Object}  Config - The configuration structure required by setupState function.
@@ -957,12 +999,13 @@ const setupState = (config) => {
         //Set default value for state variable
         ONEJS.currentState[stateId] = {};
         // ONEJS.currentState[stateId].value = value?.default ?? value;
-        if(value && typeof value === 'object' && value.hasOwnProperty('default')) ONEJS.currentState[stateId].value = value['default']; 
-        else ONEJS.currentState[stateId].value = value;              
+        if(value && typeof value === 'object' && value.hasOwnProperty('default'))
+            ONEJS.currentState[stateId].value = value['default'];
+        else ONEJS.currentState[stateId].value = value;
     });
 
     //2. Set the storage functions. They need to be set before source, as source functions modify the state
-    Object.entries(config).forEach(([stateId, value]) => { 
+    Object.entries(config).forEach(([stateId, value]) => {
         //If defined by the user, use Firestore as the storage option.
         if(value?.storage?.firestore) {
             ONEJS.currentState[stateId].storage = firestoreWrite(value.storage.firestore);
@@ -970,12 +1013,16 @@ const setupState = (config) => {
         }
         //If defined by the user, use IndexedDB as the storage option
         else if(value?.storage?.indexedDB) {
-            ONEJS.currentState[stateId].storage = indexedDBWrite(value.storage.indexedDB);            
+            ONEJS.currentState[stateId].storage = indexedDBWrite(value.storage.indexedDB);
             ONEJS.currentState[stateId].removal = indexedDBRemove(value.storage.indexedDB);
             let collections = [value.storage.indexedDB.split('/').filter(Boolean)[0]];//Note: On collections better to avoid using state variables (@stateId)
 
-            if(value.storage.collections && value.storage.collections.length) collections = value.storage.collections;//Array specifying which are the collections will be accessed. Only required for collection variable path.
-            collections.forEach(collection=>{indexedDBCollections.indexOf(collection) === -1 ? indexedDBCollections.push(collection) : null;});
+            if(value.storage.collections && value.storage.collections.length)
+                collections = value.storage.collections;//Array specifying which are the collections will be accessed. Only required for collection variable path.
+            collections.forEach(collection => {
+                indexedDBCollections.indexOf(collection) === -1 ?
+                    indexedDBCollections.push(collection) : null;
+            });
         }
         //If defined by the user, use Local Storage as the storage option
         else if(value?.storage?.local) {
@@ -989,15 +1036,16 @@ const setupState = (config) => {
             }
         }
         //If defined by the user, use any function to set the storage. It will be called on write()
-        else if(value?.storage?.function) ONEJS.currentState[stateId].storage = value.storage.function;     
+        else if(value?.storage?.function) 
+        ONEJS.currentState[stateId].storage = value.storage.function;
     });
 
     //3. set up the source functions and retrieve the initial values
-    Object.entries(config).forEach(([stateId, value]) => {       
+    Object.entries(config).forEach(([stateId, value]) => {
         //If defined by the user, use the url as the source of data
         if(value?.source?.url) {
             readUrl(value.source.url)(stateId);
-        } 
+        }
         //If defined by the user, use Firestore database as the source of data.
         else if(value?.source?.firestore) {
             if(readStateId(value.source.firestore)) {
@@ -1005,27 +1053,33 @@ const setupState = (config) => {
                 ONEJS.currentState[stateId].source = firestoreRead(value.source.firestore);//This is required for collections, when we insert a document by querying the source we retrieve the document id
             }
             firestoreRead(value.source.firestore)(stateId, 'initialize');
-        }     
+        }
         //If defined by the user, use IndexedDB as the source option
         else if(value?.source?.indexedDB) {
             ONEJS.currentState[stateId].source = indexedDBRead(value.source.indexedDB);
-            if(readStateId(value.source.indexedDB)) ONEJS.currentState[readStateId(value.source.indexedDB)].alert = true;//In case the path includes a state variable, alert for changes
+            if(readStateId(value.source.indexedDB))
+                ONEJS.currentState[readStateId(value.source.indexedDB)].alert = true;//In case the path includes a state variable, alert for changes
             let collections = [value.source.indexedDB.split('/').filter(Boolean)[0]];//Note: On collections better to avoid using state variables (@stateId)
-            if(value.source.collections && value.source.collections.length) collections = value.source.collections;//Array specifying which are the collections will be accessed. Only required for collection variable path.
-            collections.forEach(collection=>{indexedDBCollections.indexOf(collection) === -1 ? indexedDBCollections.push(collection) : null;});
+            if(value.source.collections && value.source.collections.length)
+                collections = value.source.collections;//Array specifying which are the collections will be accessed. Only required for collection variable path.
+            collections.forEach(collection => {
+                indexedDBCollections.indexOf(collection) === -1 ?
+                    indexedDBCollections.push(collection) : null;
+            });
             indexedDBStateIds[stateId] = value.source.indexedDB;
         }
         //If defined by the user, use Local Storage as the source option
         else if(value?.source?.local) {
             if(OSSPECIFICS.os === 'web') localStorageRead(value.source.local)(stateId);
-            else if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') nativeStorageRead(value.source.local)(stateId);
+            else if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android')
+                nativeStorageRead(value.source.local)(stateId);
         }
         //If defined by the user, use any function to set the storage. It will be called on write()
         //Otherwise, user can use any function to source data for the state variable. It will be called once during setupState, the user should subscribe to changes to the source in this function to update the state. 
         else if(value?.source?.function) {
             ONEJS.currentState[stateId].source = value.source.function;
             ONEJS.currentState[stateId].source(stateId);
-        }       
+        }
     });
 
     //Sets up the indexedDB tables to use as source/storage
@@ -1039,9 +1093,9 @@ const setupState = (config) => {
         let version = versionString ? parseInt(versionString) : undefined;
         let collectionsJson = localStorage.getItem('oneIndexedDBCollections' + ONEJS.appName);
         const collections = collectionsJson != null ? JSON.parse(collectionsJson) : undefined;
-        
+
         if(!collections) {//No collections existing: Store collections and upgrade version
-            collectionsJson = JSON.stringify(indexedDBCollections)
+            collectionsJson = JSON.stringify(indexedDBCollections);
             localStorage.setItem('oneIndexedDBCollections' + ONEJS.appName, collectionsJson);
             if(!version) version = 1;
             else version = version + 1;
@@ -1049,8 +1103,8 @@ const setupState = (config) => {
         }
 
         //Missing collections: Store collections and upgrade version
-        else if (!indexedDBCollections.every(collection => collections.includes(collection))){
-            collectionsJson = JSON.stringify(indexedDBCollections)
+        else if(!indexedDBCollections.every(collection => collections.includes(collection))) {
+            collectionsJson = JSON.stringify(indexedDBCollections);
             localStorage.setItem('oneIndexedDBCollections' + ONEJS.appName, collectionsJson);
             if(!version) version = 1;
             else version = version + 1;
@@ -1065,24 +1119,27 @@ const setupState = (config) => {
         openRequest.onupgradeneeded = function(e) {
             ONEJS.idb = e.target.result; //IDBDatabase object to create object stores and read/write later
             indexedDBCollections.forEach(path => {
-                if (!ONEJS.idb.objectStoreNames.contains(path)) {
-                    try{//https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Using_IndexedDB go to section: 'Structuring the Database'
+                if(!ONEJS.idb.objectStoreNames.contains(path)) {
+                    try {//https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Using_IndexedDB go to section: 'Structuring the Database'
                         ONEJS.idb.createObjectStore(path, {keyPath: 'id', autoIncrement: true}); //Can only hold JavaScript objects
                     }
-                    catch(error) {console.error('IndexedDB Object Store could not be created: ' + error)}
+                    catch(error) {
+                        console.error('IndexedDB Object Store could not be created: ' +
+                            error);
+                    }
                 }
             });
-        }
+        };
         //If the onupgradeneeded event exits successfully, the onsuccess function will be triggered. Reads the initial data from the database.
         openRequest.onsuccess = function(e) {
             ONEJS.idb = e.target.result;
             Object.entries(indexedDBStateIds).forEach(([stateId, path]) => {
-                indexedDBRead(path)(stateId, 'initialize'); 
+                indexedDBRead(path)(stateId, 'initialize');
             });
-        }
-        openRequest.onerror = function(e) {console.error('IndexedDB Error');console.error(e);};
+        };
+        openRequest.onerror = function(e) {console.error('IndexedDB Error'); console.error(e);};
     }
-}
+};
 
 /** 
 * @description Internal function to store the state modification history. Since the state is the only modifiable part of the app, it allows to go back to previous states.
@@ -1097,16 +1154,19 @@ const setupState = (config) => {
 * ```javascript 
 *   saveState('events', {id: '123', name: {'party'}}, 'app', 'arrayUpdate', '123');
 * ```
-*/ 
+*/
 const saveState = (stateId, oldValue, newValue, context, action, documentId) => {//0 is the current state, 1 would be the previous state, ... until stateHistorySize.
     if(context === 'stateHistory') return;//This occurs rewind or fastForward functions are being used, therefore no new state needs to be saved.
     if(ONEJS.stateHistoryPosition > 0) {//In case the history is rewinded and the state is modified, erase the previous path.
         ONEJS.stateHistory.splice(0, ONEJS.stateHistoryPosition);
         ONEJS.stateHistoryPosition = 0;
     }
-    ONEJS.stateHistory.unshift({stateId: stateId, oldValue: oldValue, newValue: newValue, action: action, documentId: documentId, timestamp: new Date()});
+    ONEJS.stateHistory.unshift({
+        stateId: stateId, oldValue: oldValue, newValue: newValue, action: action,
+        documentId: documentId, timestamp: new Date()
+    });
     if(ONEJS.stateHistory.length > ONEJS.stateHistorySize) ONEJS.stateHistory.pop();
-}
+};
 
 /** 
 * @description External function to go to a certain point in the state modification history. It only works for 'update' events and does not undo database storage.
@@ -1122,24 +1182,25 @@ const saveState = (stateId, oldValue, newValue, context, action, documentId) => 
 export const goToState = (statePosition) => {
     statePosition = parseInt(statePosition);
     if(statePosition < 0 || statePosition >= ONEJS.stateHistory.length) {
-        console.error('Cannot rewind state to: ' + statePosition + '. It exceeds stateHistory.length.');
+        console.error('Cannot rewind state to: ' + statePosition +
+            '. It exceeds stateHistory.length.');
         return;
     }
     else if(statePosition === ONEJS.stateHistoryPosition) {
         return;
     }
     else if(statePosition > ONEJS.stateHistoryPosition) {
-        for (let i = ONEJS.stateHistoryPosition; i < statePosition; i++) {
+        for(let i = ONEJS.stateHistoryPosition; i < statePosition; i++) {
             write(ONEJS.stateHistory[i].stateId, ONEJS.stateHistory[i].oldValue, 'stateHistory');
         }
     }
     else {
-        for (let i = ONEJS.stateHistoryPosition - 1; i >= statePosition; i--) {
+        for(let i = ONEJS.stateHistoryPosition - 1; i >= statePosition; i--) {
             write(ONEJS.stateHistory[i].stateId, ONEJS.stateHistory[i].newValue, 'stateHistory');
         }
     }
     ONEJS.stateHistoryPosition = statePosition;
-}
+};
 /** 
 * @description Goes to the next (more recent) point in the modification history. 
 * @example
@@ -1151,7 +1212,7 @@ export const goToState = (statePosition) => {
 export const nextState = () => {
     const statePosition = ONEJS.stateHistoryPosition - 1;
     goToState(statePosition);
-}
+};
 /** 
 * @description Goes to the previous (less recent) point in the modification history. 
 * @example
@@ -1163,7 +1224,7 @@ export const nextState = () => {
 export const previousState = () => {
     const statePosition = ONEJS.stateHistoryPosition + 1;
     goToState(statePosition);
-}
+};
 /** 
 * @description Returns the complete stateHistory array containing the stored modifications to the state 
 * @example
@@ -1175,7 +1236,7 @@ export const previousState = () => {
 */
 export const readStateHistory = () => {
     return ONEJS.stateHistory;
-}
+};
 
 
 //=============================================================================
@@ -1231,11 +1292,12 @@ export const readStateHistory = () => {
 const memoizeComponent = (ComponentFunction, memoized, name) => {
     let memoizedComponent = ComponentFunction;
     if(name) {
-        if(!ONEJS.memoizedComponents[name]) ONEJS.memoizedComponents[name] = memoized ? React.memo(ComponentFunction) : ComponentFunction;
+        if(!ONEJS.memoizedComponents[name]) ONEJS.memoizedComponents[name] = memoized ?
+            React.memo(ComponentFunction) : ComponentFunction;
         memoizedComponent = ONEJS.memoizedComponents[name];
     }
     return memoizedComponent;
-}
+};
 
 //=============================================================================
 // COMPONENTS: Creation Higher Order Components (HOC)
@@ -1268,11 +1330,12 @@ const memoizeComponent = (ComponentFunction, memoized, name) => {
 * ```
 * @returns {ReactElement} - If memoized, the memoized component. Otherwise, the original component.
 */
-const CreateWrappedComponentWithStructure = (name, ComponentFunction) => ({...attributes}={}) => structure => {
-    const memoized = memoizeComponent(ComponentFunction, attributes['memoized'], name);
-    delete attributes['memoized'];
-    return React.createElement(memoized, {structure: structure, ...attributes}, null);
-}
+const CreateWrappedComponentWithStructure = (name, ComponentFunction) => ({...attributes} = {}) =>
+    structure => {
+        const memoized = memoizeComponent(ComponentFunction, attributes['memoized'], name);
+        delete attributes['memoized'];
+        return React.createElement(memoized, {structure: structure, ...attributes}, null);
+    };
 
 /** 
 * @description For a given component function, creates a React element that cannot hold children / internal structure. If the user sets the attribute
@@ -1285,11 +1348,12 @@ const CreateWrappedComponentWithStructure = (name, ComponentFunction) => ({...at
 * ```
 * @returns {ReactElement} - If memoized, the memoized component. Otherwise, the original component.
 */
-const CreateWrappedComponentWithoutStructure = (name, ComponentFunction) => ({...attributes}={}) => {//Contar por que necesitamos un wrapper para usar los hooks en las funciones
-    const memoized = memoizeComponent(ComponentFunction, attributes['memoized'], name);
-    delete attributes['memoized'];
-    return React.createElement(memoized, attributes); //React uses property "children" to setup the component internals
-}
+const CreateWrappedComponentWithoutStructure = (name, ComponentFunction) =>
+    ({...attributes} = {}) => {//Contar por que necesitamos un wrapper para usar los hooks en las funciones
+        const memoized = memoizeComponent(ComponentFunction, attributes['memoized'], name);
+        delete attributes['memoized'];
+        return React.createElement(memoized, attributes); //React uses property "children" to setup the component internals
+    };
 
 /** 
 * @description For a given component function, creates a React element that can hold children / internal structure. If the user sets the attribute
@@ -1297,19 +1361,21 @@ const CreateWrappedComponentWithoutStructure = (name, ComponentFunction) => ({..
 * @param {String} name - Unique name for the Component.
 * @param {Function | String} ComponentFunction - The component function to be created into a React element.
 * @param {Object} attributes - The attributes that will be passed during component instantiation.
-* @param {Object} structure - The internal structure that will be passed during component instatiation.
+* @param {Object} structure - The internal structure that will be passed during component instantiation.
 * @example
 * ```javascript 
 *   CreateComponentWithStructure(props=>structure=>Div(props)(structure))({id: 'myId'})(Text()('Hello World'));
 * ```
 * @returns {ReactElement} - If memoized, the memoized component. Otherwise, the original component.
 */
-const CreateComponentWithStructure = (name, ComponentFunction) => ({...attributes}={}) => structure => {
-    const uncurriedComponentFunction = ({structure, ...attributes} = {}) => ComponentFunction(attributes)(structure);
-    const memoized = memoizeComponent(uncurriedComponentFunction, attributes['memoized'], name);
-    delete attributes['memoized'];
-    return React.createElement(memoized, {structure: structure, ...attributes}, null);
-}
+const CreateComponentWithStructure = (name, ComponentFunction) => ({...attributes} = {}) =>
+    structure => {
+        const uncurriedComponentFunction = ({structure, ...attributes} = {}) =>
+            ComponentFunction(attributes)(structure);
+        const memoized = memoizeComponent(uncurriedComponentFunction, attributes['memoized'], name);
+        delete attributes['memoized'];
+        return React.createElement(memoized, {structure: structure, ...attributes}, null);
+    };
 
 /** 
 * @description For a given component function, creates a React element that cannot hold children / internal structure. If the user sets the attribute
@@ -1323,13 +1389,14 @@ const CreateComponentWithStructure = (name, ComponentFunction) => ({...attribute
 * ```
 * @returns {ReactElement} - If memoized, the memoized component. Otherwise, the original component.
 */
-const CreateComponentWithoutStructure = (name, ComponentFunction) => ({...attributes}={}) => {
+const CreateComponentWithoutStructure = (name, ComponentFunction) => ({...attributes} = {}) => {
     if(name & attributes['memoized']) {//memoizeComponent cannot be called since passing the component function and returning the same reference creates a loop
-        if(!ONEJS.memoizedComponents[name]) ONEJS.memoizedComponents[name] = React.memo(ComponentFunction);
-        return React.createElement(ONEJS.memoizedComponents[name], attributes, null); 
+        if(!ONEJS.memoizedComponents[name])
+            ONEJS.memoizedComponents[name] = React.memo(ComponentFunction);
+        return React.createElement(ONEJS.memoizedComponents[name], attributes, null);
     }
-    return React.createElement(ComponentFunction, attributes, null); 
-}
+    return React.createElement(ComponentFunction, attributes, null);
+};
 
 /** 
 * @description For a given component function or tag, creates a React element that has been previously wrapped in a HOC to provide additional functionality: theming,
@@ -1343,9 +1410,10 @@ const CreateComponentWithoutStructure = (name, ComponentFunction) => ({...attrib
 * @returns {ReactElement} - The enhanced React element.
 */
 export const BaseComponent = (name, hasChildren, ComponentFunctionOrTag) => {
-    if(hasChildren) return CreateWrappedComponentWithStructure(name, EnhancedComponent(ComponentFunctionOrTag));    
+    if(hasChildren) return CreateWrappedComponentWithStructure(name,
+        EnhancedComponent(ComponentFunctionOrTag));
     return CreateWrappedComponentWithoutStructure(name, EnhancedComponent(ComponentFunctionOrTag));
-}
+};
 
 /** 
 * @description For a given component function, creates a React element. This is the main method to create your own custom components. 
@@ -1363,13 +1431,13 @@ export const BaseComponent = (name, hasChildren, ComponentFunctionOrTag) => {
 export const Component = (name, hasChildren, ComponentFunction) => {
     if(hasChildren) return CreateComponentWithStructure(name, ComponentFunction);
     return CreateComponentWithoutStructure(name, ComponentFunction);
-}
+};
 
 /** 
 * @description A Higher Order Component (HOC) that provides additional functionality to the wrapped component for theming, inlineStyles, and lifecycle events.
 * @param {Function | String} ComponentFunction - The component function to be wrapped and infused with enhanced functionality.
-* @param {Object} structure - The internal structure that will be passed during component instatiation.
-* @param {Array<String> | String} flavor - The chosen flavor(s) during instatiation. For this function only the flavor ids are required to set the corresponding
+* @param {Object} structure - The internal structure that will be passed during component instantiation.
+* @param {Array<String> | String} flavor - The chosen flavor(s) during instantiation. For this function only the flavor ids are required to set the corresponding
 * CSS classes.
 * @param {Array<Object> | Object} style - The style to be compiled into a css class.
 * @param {Object} inlineStyle - The inline style chosen during instantiation.
@@ -1383,7 +1451,7 @@ export const Component = (name, hasChildren, ComponentFunction) => {
 *   const template = () => [MyComponent({onCreate: addListeners})]
 * ```
 * @param {Function} onDestroy - Called onComponentWillUnmount event. The function takes as inputs newValue and component.
-* @param {Object} onPropertyChange - Called after onComponenDidMount event for every change in the value of the tracked properties.
+* @param {Object} onPropertyChange - Called after onComponentDidMount event for every change in the value of the tracked properties.
 * Takes an object whose keys are the properties tracked and the values the callback function. The function takes as inputs newValue and component.
 * @example
 * ```javascript 
@@ -1391,19 +1459,24 @@ export const Component = (name, hasChildren, ComponentFunction) => {
 * ```
 * @returns {ReactElement} - If memoized, the memoized component. Otherwise, the original component.
 */
-const EnhancedComponent = (ComponentFunctionOrTag) => ({structure, flavor, style, inlineStyle, url, onInit, onCreate, onDestroy, onPropertyChange, ...attributes}={}) => {    
+const EnhancedComponent = (ComponentFunctionOrTag) => ({structure, flavor, style, inlineStyle, url,
+    onInit, onCreate, onDestroy, onPropertyChange, ...attributes} = {}) => {
     //START CLASS SETUP: Web Specific. No class or className in React Native
     const classArray = [];
     if(OSSPECIFICS.os === 'web') {
         //Add instantiation class(es) to the class array
-        if(attributes['class']) {Array.isArray(attributes['class']) ? classArray.push(...attributes['class']) : classArray.push(attributes['class']); delete attributes['class']}
-        
+        if(attributes['class']) {
+            Array.isArray(attributes['class']) ?
+                classArray.push(...attributes['class']) : classArray.push(attributes['class']);
+            delete attributes['class'];
+        }
+
         //Add flavor class to the class array
         // if(flavor?.flavorId) {
         //     if(Array.isArray(flavor.flavorId)) {classArray.push(...flavor.flavorId.map(flavorId => ONEJS.emotionCSSClasses['flavor'+flavorId]));}
         //     else classArray.push(ONEJS.emotionCSSClasses['flavor'+flavor.flavorId]);
         // }
-        
+
         //Add compiled style class to the class array
         if(style) {//style can of Array type. The priority is from left (least priority) to write (most priority)
             classArray.push(OSSPECIFICS.css(style));
@@ -1412,7 +1485,7 @@ const EnhancedComponent = (ComponentFunctionOrTag) => ({structure, flavor, style
         if(inlineStyle) attributes['style'] = inlineStyle;
         //END CLASS SETUP        
     }
-    else if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') attributes['style'] = style;//Sylesheet.create does not seem to provide any performance boost, only validation in dev. https://stackoverflow.com/questions/38886020/what-is-the-point-of-stylesheet-create
+    else if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') attributes['style'] = style;//Stylesheet.create does not seem to provide any performance boost, only validation in dev. https://stackoverflow.com/questions/38886020/what-is-the-point-of-stylesheet-create
 
     //*REACT SPECIFIC* Lifecycle functions
     if(onInit) {//Similar to the deprecated ComponentWillMount. The limitation is that domNode is not yet available and cannot be accessed for changes. If this is needed wait until onCreate
@@ -1425,28 +1498,30 @@ const EnhancedComponent = (ComponentFunctionOrTag) => ({structure, flavor, style
 
     if((url && OSSPECIFICS.os === 'web') || onCreate || onDestroy || onPropertyChange) {
         const domNode = React.useRef();
-        attributes['ref'] = domNode;    
+        attributes['ref'] = domNode;
         if(url || onCreate || onDestroy) {//onCreate is equivalent to ComponentDidMount and onDestroy is equivalent to ComponentWillUnmount
             React.useEffect(() => { //React Effect: https://es.reactjs.org/docs/hooks-overview.html
                 if(onCreate) onCreate(domNode.current);
                 if(onDestroy) return onDestroy(domNode.current);
-                if(url && OSSPECIFICS.os === 'web') setupUrl(url)(domNode.current)
+                if(url && OSSPECIFICS.os === 'web') setupUrl(url)(domNode.current);
             }, []);//The array is the properites for which it should trigger the change. If empty, then none. If no parameter, then all.        
         }
         if(onPropertyChange) {//onPropertyChange: {prop1: function1, prop2: function2};//Functions take (newValue, domNode)
-            Object.entries(onPropertyChange).map(([property, callback]) => {  
-                React.useEffect(() => {  
+            Object.entries(onPropertyChange).map(([property, callback]) => {
+                React.useEffect(() => {
                     callback(attributes[property], domNode.current); //Equivalent to componentDidMount lifecycle call
                 }, [attributes[property]]);
             });
         }
-    } 
-    if(url && (OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android')) attributes['onPress'] = () => updateUrl(url);
-    
+    }
+    if(url && (OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android'))
+        attributes['onPress'] = () => updateUrl(url);
+
     //If the structure is an array with missing 'key' property, then destructure the input; The structure array with n objects, becomes n arguments in the function
-    if(Array.isArray(structure) && structure?.length > 0 && structure?.[0]?.key == null) return React.createElement(ComponentFunctionOrTag, attributes, ...structure)
-    return React.createElement(ComponentFunctionOrTag, attributes, structure); 
-}
+    if(Array.isArray(structure) && structure?.length > 0 && structure?.[0]?.key == null)
+        return React.createElement(ComponentFunctionOrTag, attributes, ...structure);
+    return React.createElement(ComponentFunctionOrTag, attributes, structure);
+};
 
 //=============================================================================
 // APP: A function that ties together the functionality of all the other modules.
@@ -1466,7 +1541,7 @@ const EnhancedComponent = (ComponentFunctionOrTag) => ({structure, flavor, style
 * @param {Theme} [theme] - The collection of flavors that will be used to style the app. Defines the theme variables and the values that will be used for each flavor.
 * It can also be a string to choose from the out-of-the-box themes provided by oneJS.
 * @param {Text} [text] - The translatable text strings to be used in the app. 
-* @param {Object} - The initialized firestore dabase object to enable performing the read/write operations.
+* @param {Object} - The initialized firestore database object to enable performing the read/write operations.
 * @param {Function} template - A function that returns the template of the app.
 * @example
 * Simple Hello World example:
@@ -1494,27 +1569,32 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
     setupTheme({theme: theme}); //Setting up before AppComponent for the css class order.
 
     //*REACT SPECIFIC*
-    const appFunction =  ({state={}, template}={}) => {//Called on every rerender
+    const appFunction = ({state = {}, template} = {}) => {//Called on every rerender
         //Setup url variables
-        if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') [ONEJS.url, ONEJS.setUrl] = React.useState('/');
+        if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android')
+            [ONEJS.url, ONEJS.setUrl] = React.useState('/');
 
         //Set default value for state variables
         Object.entries(state).forEach(([stateId, value]) => {
-            const reactInitialState = (value && typeof value === 'object' && value.hasOwnProperty('default')) ? value['default'] : value;
-            [ONEJS.reactState[stateId], ONEJS.reactSetState[stateId]] = React.useState(reactInitialState);
+            const reactInitialState = (value && typeof value === 'object' &&
+                value.hasOwnProperty('default')) ? value['default'] : value;
+            [ONEJS.reactState[stateId],
+            ONEJS.reactSetState[stateId]] = React.useState(reactInitialState);
             /* React.useState(initialState): Returns an array with a stateful value, and a function to update it. [state, setState()]
                 -initialState: During the initial render, the returned state (state) is the same as the value passed as the first argument (initialState).
                 -setState(): The setState function is used to update the state. It accepts a new state value and enqueues a re-render of the component.
-            */    
+            */
         });
 
         const initialized = React.useRef();
-        
+
         //Native Initializers: 
         if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') {
             //Setup url listener for native. Called before setup state in order to avoid the first call when ONEJS.url is first set.
             React.useEffect(() => {
-                if(initialized) ONEJS.urlStateVariables.forEach(stateVariable => write(stateVariable.stateId, readUrlData(stateVariable.url), 'url', 'update'));
+                if(initialized) ONEJS.urlStateVariables.forEach(
+                    stateVariable => write(stateVariable.stateId, readUrlData(stateVariable.url),
+                        'url', 'update'));
             }, [ONEJS.url]);
             //Setup fonts for native. Called before setup state to take advantage of the async loading while the state is being set.
             if(font && typeof font === 'object') {
@@ -1526,18 +1606,20 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
         //Sets up the state for the app for the first time
         if(!initialized.current) {
             setupState(state);
-            
+
             //Web Initializers
             if(OSSPECIFICS.os === 'web') {
                 //Setup url listeners for web
-                window.addEventListener('urlChange',  (e) => { 
-                    ONEJS.urlStateVariables.forEach(stateVariable => write(stateVariable.stateId, readUrlData(stateVariable.url), 'url', 'update'));
+                window.addEventListener('urlChange', (e) => {
+                    ONEJS.urlStateVariables.forEach(stateVariable => write(stateVariable.stateId,
+                        readUrlData(stateVariable.url), 'url', 'update'));
                 }, false);
                 //Setup fonts for web
                 if(font) {
                     let fontStyle = document.createElement('style');
                     Object.entries(font).forEach(([key, value]) => {
-                        fontStyle.appendChild(document.createTextNode("@font-face {font-family: " + key + "; src: url('" + value + "');}"));
+                        fontStyle.appendChild(document.createTextNode("@font-face {font-family: " +
+                            key + "; src: url('" + value + "');}"));
                     });
                     document.head.appendChild(fontStyle);
                 }
@@ -1547,12 +1629,13 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
 
         if(!ONEJS.appTemplate) ONEJS.appTemplate = template();
         const structure = template(); //Template needs to be a function, otherwise the code is executed and the elements are not wrapped by reactCreateElement function
-        if((OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') && font && typeof font === 'object' && !ONEJS.fontsLoaded) return null; //Wait until fonts are loaded
+        if((OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') && font &&
+            typeof font === 'object' && !ONEJS.fontsLoaded) return null; //Wait until fonts are loaded
         if(Array.isArray(structure) && structure?.length > 0 && structure?.[0]?.key == null) {
             return React.createElement(React.Fragment, null, ...structure);//If the structure is an array with missing 'key' property, then destructure the input
         };
-        return structure;    
-    }
+        return structure;
+    };
 
     if(OSSPECIFICS.os === 'web') {
         const bodyStyle = {
@@ -1566,14 +1649,14 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
             justifyContent: 'flex-start',  //Horizontal alignment of the items
             alignItems: 'stretch',         //Vertical alignment of the items
             alignContent: 'flex-start',    //Horizontal alignment of the item columns
-        }
+        };
         document.body.classList.add(OSSPECIFICS.css(bodyStyle));
     }
-    
+
     //Render the app in the appropiate container
-    const AppComponent = React.createElement(appFunction, {state: state, template: template},null);
+    const AppComponent = React.createElement(appFunction, {state: state, template: template}, null);
     if(os === 'web') {
-        const container = document.getElementById('app'); //document.body; //Using body is discoraged by React
+        const container = document.getElementById('app'); //document.body; //Using body is discouraged by React
         /* Flexbox works the same way in React Native as it does in CSS on the web, with a few exceptions: https://reactnative.dev/docs/flexbox
         The defaults are different, with flexDirection defaulting to column instead of row, alignContent defaulting to flex-start instead of stretch, 
         flexShrink defaulting to 0 instead of 1, the flex parameter only supporting a single number.
@@ -1590,7 +1673,7 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
     else {
         OSSPECIFICS.registerRootComponent(() => AppComponent);
     }
-}
+};
 
 //=============================================================================
 // WEB THEME: This module aims to provide a unified and predictable way to define
@@ -1672,22 +1755,27 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
 */
 const toStandardStyle = (themeVariableId, themeVariableValue) => {
     //Create shadow style object based on elevation property
-    if(themeVariableId === 'shadow' && typeof themeVariableValue === 'object') return generateShadow(themeVariableValue);
+    if(themeVariableId === 'shadow' && typeof themeVariableValue === 'object')
+        return generateShadow(themeVariableValue);
     //Create gradient for texts
-    if(themeVariableId === 'textGradient' && typeof themeVariableValue === 'object') return generateGradient(themeVariableValue);
+    if(themeVariableId === 'textGradient' && typeof themeVariableValue === 'object')
+        return generateGradient(themeVariableValue);
     //Create gradient for backgrounds
-    if(themeVariableId === 'backgroundGradient' && typeof themeVariableValue === 'object') return generateGradient(themeVariableValue);
+    if(themeVariableId === 'backgroundGradient' && typeof themeVariableValue === 'object')
+        return generateGradient(themeVariableValue);
     //Create gradient for backgrounds and icons
     if(themeVariableId === 'primaryGradient' && typeof themeVariableValue === 'object') {
         const svgId = JSON.stringify(themeVariableValue).replace(/[^a-zA-Z0-9]/g, '');
         let standardGradient = generateGradient(themeVariableValue);
-        standardGradient = typeof standardGradient === 'string' ? standardGradient : {id: svgId, ...standardGradient};
+        standardGradient = typeof standardGradient === 'string' ?
+            standardGradient : {id: svgId, ...standardGradient};
         const svgGradient = generateGradient({...themeVariableValue, svgId: svgId});
-        ONEJS.iconGradients.set(standardGradient?.id ?? standardGradient, {id: svgId, value: svgGradient});
+        ONEJS.iconGradients.set(standardGradient?.id ?? standardGradient,
+            {id: svgId, value: svgGradient});
         return standardGradient;
     }
     else return themeVariableValue;
-}
+};
 
 /**
 * @typedef  {Object}  Flavor          - The configuration assigning a value to each of the theme variables.
@@ -1706,15 +1794,22 @@ const toStandardStyle = (themeVariableId, themeVariableValue) => {
 * @returns {Flavor} - The flavor selected.
 */
 export const readFlavor = (...flavorName) => {
-    if(!flavorName || flavorName?.length === 0) {console.error('readFlavor: Invalid flavor name: '+ flavor);return {};} 
+    if(!flavorName || flavorName?.length === 0) {
+        console.error('readFlavor: Invalid flavor name: ' +
+            flavor); return {};
+    }
     if(Array.isArray(flavorName[0])) flavorName = flavorName[0]; //This way we allow three input options: String, Array and destructured
     if(flavorName.length > 1) {//Flavor is an array of strings: Increasing priority from left to right
         let flavorObject = {};//Used inside EnhancedComponent to read the flavor CSS and add a class with the variable values.
-        flavorName.forEach((flavor) => {flavorObject = flavor ? {...flavorObject, ...ONEJS.theme[flavor]} : flavorObject});
+        flavorName.forEach((flavor) => {
+            flavorObject = flavor ?
+                {...flavorObject, ...ONEJS.theme[flavor]} : flavorObject;
+        });
         return {...ONEJS.theme['default'], ...flavorObject};
     }
-    return ONEJS.theme[flavorName[0]] ? {...ONEJS.theme['default'], ...ONEJS.theme[flavorName[0]]} : ONEJS.theme['default'];
-}
+    return ONEJS.theme[flavorName[0]] ?
+        {...ONEJS.theme['default'], ...ONEJS.theme[flavorName[0]]} : ONEJS.theme['default'];
+};
 /** 
 * @description Updates the value of entire flavor or the theme variable within the flavor .
 * @param {String} flavorName - The name of the flavor to be updated.
@@ -1728,10 +1823,13 @@ export const readFlavor = (...flavorName) => {
 * ```
 */
 export const updateFlavor = (flavorName, themeVariableId) => value => {
-    if(!ONEJS.style?.flavorName) {console.error('[oneJS] updateFlavor: Invalid flavor name: ' + flavorName); return}
+    if(!ONEJS.style?.flavorName) {
+        console.error('[oneJS] updateFlavor: Invalid flavor name: ' + flavorName);
+        return;
+    }
     if(typeof themeVariableId === 'string') ONEJS.theme.flavorName.themeVariableId = value;
     ONEJS.theme.flavorName = value;
-}
+};
 
 /** 
 * @description Returns the style configuration associated to the style(s) selected.
@@ -1744,7 +1842,10 @@ export const updateFlavor = (flavorName, themeVariableId) => value => {
 * @returns {Object} - The resulting style of merging the different styles.
 */
 export const readStyle = (...styleName) => {
-    if(!styleName || styleName?.length === 0) {console.error('[oneJS] readFlavor: Invalid flavor name: '+ flavor);return {};} 
+    if(!styleName || styleName?.length === 0) {
+        console.error('[oneJS] readFlavor: Invalid flavor name: ' + flavor);
+        return {};
+    }
     if(Array.isArray(styleName[0])) styleName = styleName[0]; //This way we allow three input options: String, Array and destructured (combining destructured and array is not possible)
     if(styleName.length > 1) {//Flavor is an array of strings: Increasing priority from left to right
         let styleArray = [];//Used inside EnhancedComponent to read the flavor CSS and add a class with the variable values.
@@ -1752,7 +1853,7 @@ export const readStyle = (...styleName) => {
         return mergeStyles(styleArray);
     }
     return ONEJS.style[styleName[0]];
-}
+};
 /** 
 * @description Updates the value of entire style or an attribute within the style .
 * @param {String} styleName - The name of the style to be updated.
@@ -1766,14 +1867,17 @@ export const readStyle = (...styleName) => {
 * ```
 */
 export const updateStyle = (styleName, attributeId) => value => {
-    if(!ONEJS.style?.styleName) {console.error('[oneJS] updateStyle: Invalid style name: ' + styleName); return}
+    if(!ONEJS.style?.styleName) {
+        console.error('[oneJS] updateStyle: Invalid style name: ' + styleName);
+        return;
+    }
     if(typeof attributeId === 'string') ONEJS.style.styleName.attributeId = value;
     ONEJS.style.styleName = value;
-}
+};
 
 /** 
 * @description Using the theme and themeSetup configuration objects creates the css classes and applies then to the DOM objects. 
-* The default falvor values are set at body level.
+* The default flavor values are set at body level.
 * @param {Theme | String} theme - If it is a string, the oneJS theme to be used. If a theme object, the collection of flavors with the theme variables.
 * @param {Object} themeSetup - The CSS in JS object applying the theme variables to the DOM objects.
 * @param {Object} themeCollection - The collection of preset themes provided.
@@ -1784,7 +1888,7 @@ export const updateStyle = (styleName, attributeId) => value => {
 *   setupTheme({theme: theme, themeSetup: themeSetup});
 * ```
 */
-const setupTheme = ({theme, themeCollection=oneTheme}={}) => {
+const setupTheme = ({theme, themeCollection = oneTheme} = {}) => {
     /*There are three options: 
         theme = null/undefined -> No theme is used
         theme = <string value> -> User wants to select one of the collection of themes from the theme collection
@@ -1799,11 +1903,11 @@ const setupTheme = ({theme, themeCollection=oneTheme}={}) => {
     //Setup the ONEJS.theme object
     Object.entries(theme).forEach(([flavorId, flavorValue]) => { //Transform each of the themes in css variables stored in a class. This can now be applied to any component
         ONEJS.theme[flavorId] = {flavorId: flavorId};
-        Object.entries(flavorValue).forEach(([key, value]) => { 
-                ONEJS.theme[flavorId][key] = value === null ? null : toStandardStyle(key, value);
+        Object.entries(flavorValue).forEach(([key, value]) => {
+            ONEJS.theme[flavorId][key] = value === null ? null : toStandardStyle(key, value);
         });
     });
-}
+};
 
 /** 
 * @description Reads the SVG icon gradient that has been stored in the ONEJS.iconGradients variable. For web, icon gradients are stored by 'setupTheme' function
@@ -1828,7 +1932,7 @@ const setupTheme = ({theme, themeCollection=oneTheme}={}) => {
 */
 export const readIconGradient = gradientId => {
     return ONEJS?.iconGradients?.get(typeof gradientId === 'string' ? gradientId : gradientId?.id);
-}
+};
 
 /** 
 * @description Given a set of parameters generates a gradient for both web, native and SVG icons.
@@ -1864,34 +1968,50 @@ export const readIconGradient = gradientId => {
 * ```
 * @returns {String | Object} - Generated gradient in string or object format, depending on the platform.
 */
-export const generateGradient = ({colors, angle=0, start, end, locations, svgId}) => {
-    if(!colors || !Array.isArray(colors) || colors.length < 2) {console.error('generateGradient: "colors" array must contain at least two items');return}
-    if(!locations) locations = colors.map((color, index) => Number((index / (colors.length - 1)).toFixed(2)));
-    else if(locations && locations.length !== colors.length) {console.error('generateGradient: "colors" and "locations" arrays must be the same length.');return}
-    
+export const generateGradient = ({colors, angle = 0, start, end, locations, svgId}) => {
+    if(!colors || !Array.isArray(colors) || colors.length < 2) {
+        console.error('generateGradient: "colors" array must contain at least two items');
+        return;
+    }
+    if(!locations) locations = colors.map((color, index) =>
+        Number((index / (colors.length - 1)).toFixed(2)));
+    else if(locations && locations.length !== colors.length) {
+        console.error('generateGradient: "colors" and "locations" arrays must be the same length.');
+        return;
+    }
+
     //CSS linear-gradient
-    if(OSSPECIFICS.os === 'web' && !svgId) return 'linear-gradient(' + (90 - angle) + 'deg, ' + colors.join(', ') + ')';//Following the unit circle where the first color is in the origin and the rest in the direction of the angle
-    
-    //For native and SVG, transforms the angle into the start and end pair of [x,y] coordintates.
+    if(OSSPECIFICS.os === 'web' && !svgId)
+        return 'linear-gradient(' + (90 - angle) + 'deg, ' + colors.join(', ') + ')';//Following the unit circle where the first color is in the origin and the rest in the direction of the angle
+
+    //For native and SVG, transforms the angle into the start and end pair of [x,y] coordinates.
     if(start == null || end == null) {
         const a = angle * Math.PI / 180;//Input angle is in degrees need to convert to radians
         const k = Math.ceil(Math.sin(45 * Math.PI / 180) * 10000) / 10000;//Sin(45) = cos(45). Rounding up to avoid obtaining x and y greater than 1.
         start = {x: Math.cos(a) > 0 ? 0 : 1, y: Math.sin(a) > 0 ? 1 : 0};
         end = {
-            x: Math.abs(Math.cos(a)) < k ? +Math.abs(start.x - Math.abs(Math.cos(a))/k).toFixed(2) : Math.abs(start.x - 1),
-            y: Math.abs(Math.sin(a)) < k ? +Math.abs(start.y - Math.abs(Math.sin(a))/k).toFixed(2) : Math.abs(start.y - 1)
+            x: Math.abs(Math.cos(a)) < k ?
+                +Math.abs(start.x - Math.abs(Math.cos(a)) / k).toFixed(2) : Math.abs(start.x - 1),
+            y: Math.abs(Math.sin(a)) < k ?
+                +Math.abs(start.y - Math.abs(Math.sin(a)) / k).toFixed(2) : Math.abs(start.y - 1)
         };
         //Reposition start and end, so that the vector that goes from start to end crosses the center of the square
-        if(start.x + end.x !== 1) {const dif = start.x - end.x; start.x = 0.5 + dif / 2; end.x = 0.5 - dif / 2}; //Reposition to the center
-        if(start.y + end.y !== 1) {const dif = start.y - end.y; start.y = 0.5 + dif / 2; end.y = 0.5 - dif / 2}; //Reposition to the center
+        if(start.x + end.x !== 1) {
+            const dif = start.x - end.x; start.x = 0.5 + dif / 2; end.x = 0.5 - dif / 2;
+        }; //Reposition to the center
+        if(start.y + end.y !== 1) {
+            const dif = start.y - end.y; start.y = 0.5 + dif / 2; end.y = 0.5 - dif / 2;
+        }; //Reposition to the center
     }
 
     //SVG Gradient
-    if(svgId) return '<defs><linearGradient id="' + svgId + '" x1="' + start.x + '" y1="' + start.y + '" x2="' + end.x + '" y2="' + end.y + '">' + 
-            locations.map((location, index) => '<stop offset="' + location + '" stop-color="' + colors[index] + '"></stop>').join('') + '</linearGradient></defs>';
+    if(svgId) return '<defs><linearGradient id="' + svgId + '" x1="' + start.x + '" y1="' +
+        start.y + '" x2="' + end.x + '" y2="' + end.y + '">' +
+        locations.map((location, index) => '<stop offset="' + location + '" stop-color="' +
+            colors[index] + '"></stop>').join('') + '</linearGradient></defs>';
     //Expo LinearGradient
-    return {colors: colors, locations: locations, start: start, end: end};    
-}
+    return {colors: colors, locations: locations, start: start, end: end};
+};
 
 /** 
 * @description Generates a shadow that looks consistent across web and native given the component's elevation.
@@ -1901,14 +2021,17 @@ export const generateGradient = ({colors, angle=0, start, end, locations, svgId}
 * ```javascript 
 *   const theme = {dark: {primaryColor: '#ffffff', backgroundColor: '#333333', shadow: generateShadow(4)}};
 * ```
-* @returns {String | Obect} - For web, returns the box-shadow CSS string. For Android, the elevation object. For iOS, the object with the shadow properties.
+* @returns {String | Object} - For web, returns the box-shadow CSS string. For Android, the elevation object. For iOS, the object with the shadow properties.
 */
 export const generateShadow = ({elevation}) => {//min elevation 0, max elevation 24. Remove os as input and use internally
     if(!elevation) return {}; //If elevation is 0 or null/undefined
-    if(typeof elevation !== 'number') {console.error('generateShadow: elevation must be a number.'); return {};}
+    if(typeof elevation !== 'number') {
+        console.error('generateShadow: elevation must be a number.');
+        return {};
+    }
 
     if(OSSPECIFICS.os === 'android') return {elevation: elevation};
-    else if (OSSPECIFICS.os === 'ios') return {
+    else if(OSSPECIFICS.os === 'ios') return {
         shadowColor: 'black',
         shadowOffset: {
             width: 0,
@@ -1916,11 +2039,15 @@ export const generateShadow = ({elevation}) => {//min elevation 0, max elevation
         },
         shadowOpacity: 0.01739 * elevation + 0.1626,//[1-24] => [0.18, 0.58]
         shadowRadius: 0.6956 * elevation + 0.3043,//[1-24] => [1, 16]
-    }
+    };
     //CSS box-shadow: horizontal offset, vertical offset, blur, spread, color
-    else if(OSSPECIFICS.os === 'web') return {boxShadow: '0 ' + elevation / 2 + 'px ' + elevation + 'px ' + elevation / 2 + 'px rgba(0, 0, 0, 0.1)'};
+    else if(OSSPECIFICS.os === 'web')
+        return {
+            boxShadow: '0 ' + elevation / 2 + 'px ' + elevation + 'px ' + elevation / 2 +
+                'px rgba(0, 0, 0, 0.1)'
+        };
     return {};
-}
+};
 
 /** 
 * @description The styles to be merged are input separated by a comma and they are combined applying left to right increasing priority. This is specially
@@ -1942,11 +2069,13 @@ export const generateShadow = ({elevation}) => {//min elevation 0, max elevation
 export const mergeStyles = (...styles) => {
     let finalStyle = {};
     styles?.forEach((style) => {
-        if(Array.isArray(style)) style.forEach(styleObj => {if(styleObj && typeof styleObj === 'object') finalStyle = {...finalStyle, ...styleObj};});
+        if(Array.isArray(style)) style.forEach(styleObj => {
+            if(styleObj && typeof styleObj === 'object') finalStyle = {...finalStyle, ...styleObj};
+        });
         else if(style && typeof style === 'object') finalStyle = {...finalStyle, ...style};
     });
     return finalStyle;
-}
+};
 
 /**
 * @typedef  {Object}  Content     - The configuration specifying the positioning of the component's content. It is used in the View component only.
@@ -1960,18 +2089,18 @@ export const mergeStyles = (...styles) => {
 *   left:           Default value. Places children components aligned to the left.
 *   right:          Places children components aligned to the right.
 *   center:         Places children components aligned to the center.
-*   distribute:     Distributes children equidistantially with respect to each other and the edges of the parent.
+*   distribute:     Distributes children equidistantly with respect to each other and the edges of the parent.
 *   space:          Distributes children so that they are as spaced from each other as possible and pushes them towards the parent's edges.
-*   stretch:        Streches children components across the transversal (horizontal direction) to fill the component. Similar to expand, but expand is set on the
+*   stretch:        Stretches children components across the transversal (horizontal direction) to fill the component. Similar to expand, but expand is set on the
 *                   each of the children and works in the content direction. 
 * @property {String}  [v]         - The vertical distribution and positioning of the children. When the content is positioned in rows and it overflows spanning
 *                                   several rows, it is also used to set how these rows are distributed (as if they were single vertical blocks).
 *   top:            Default value. Places children components aligned to the top.
 *   bottom:         Places children components aligned to the bottom.
 *   center:         Places children components aligned to the center.
-*   distribute:     Distributes children equidistantially with respect to each other and the edges of the parent.
+*   distribute:     Distributes children equidistantly with respect to each other and the edges of the parent.
 *   space:          Distributes children so that they are as spaced from each other as possible and pushes them towards the parent's edges.
-*   stretch:        Streches children components across the transversal (vertical direction) to fill the component. Similar to expand, but expand is set on the
+*   stretch:        Stretches children components across the transversal (vertical direction) to fill the component. Similar to expand, but expand is set on the
 *                   each of the children and works in the content direction. 
 * @property {Boolean} [wrap]      - Specifies whether children components are allowed to overflow into extra rows/columns once the space in the first row/column is
 *                                   exhausted. True by default.
@@ -2007,7 +2136,7 @@ export const positionContent = (content) => {
         direction = content.direction ?? 'row';
         gap = content.gap ? {gap: gap} : {}; //Gap property is not yet implemented in React Native: https://github.com/facebook/yoga/issues/812
         longitudinal = direction === 'row' ? content.h ?? 'left' : content.v ?? 'top';  //In the content direction
-        transversal  = direction === 'row' ? content.v ?? 'top'  : content.h ?? 'left'; //Transversal to the content direction
+        transversal = direction === 'row' ? content.v ?? 'top' : content.h ?? 'left'; //Transversal to the content direction
 
         //Options for longitudinal alignment in CSS (justify-content): flex-start | flex-end | center | space-between | space-around | space-evenly | start | end | left | right
         //Options for longitudinal alignment in oneJS: left, center, right (for rows). top, center, bottom (for cols). space, distribute (for both)
@@ -2015,21 +2144,26 @@ export const positionContent = (content) => {
         else if(longitudinal === 'bottom' || longitudinal === 'right') longitudinal = 'flex-end';
         else if(longitudinal === 'distribute') longitudinal = 'space-around';
         else if(longitudinal === 'space') longitudinal = 'space-between';
-        else longitudinal = 'flex-start';       
+        else longitudinal = 'flex-start';
 
         //Options for transversal alignemnt in CSS (align-items): stretch | flex-start | flex-end | center | baseline | first baseline | last baseline | start | end | self-start | self-end
         //Options for transversal alignment in oneJS: left, center, right (for cols). top, center, bottom (for rows). stretch?
         //Options for transversal alignment of the contet overflow in CSS (align-content): flex-start | flex-end | center | space-between | space-around | space-evenly | stretch | start | end | baseline | first baseline | last baseline
         //These options are also used to align the content overflow:
         if(transversal === 'center') {transversal = transversal; overflow = 'center';}
-        else if(transversal === 'bottom' || transversal === 'right') {transversal = 'flex-end'; overflow = 'flex-end';}
+        else if(transversal === 'bottom' || transversal === 'right') {
+            transversal = 'flex-end'; overflow = 'flex-end';
+        }
         else if(transversal === 'distribute') {transversal = 'center'; overflow = 'space-around';}
         else if(transversal === 'space') {transversal = 'center'; overflow = 'space-between';}
         else if(transversal === 'stretch') {transversal = 'stretch'; overflow = 'stretch';} //Stretch: If the transversal dimension is not known, stretches the element. To be able to stretch the element 'align-content' also needs to be set to stretch.
-        else {transversal = 'flex-start'; overflow = 'flex-start';}           
+        else {transversal = 'flex-start'; overflow = 'flex-start';}
     }
-    return {flexDirection: direction, justifyContent: longitudinal, alignItems: transversal, alignContent: overflow, flexWrap: wrap, ...gap}; 
-}
+    return {
+        flexDirection: direction, justifyContent: longitudinal, alignItems: transversal,
+        alignContent: overflow, flexWrap: wrap, ...gap
+    };
+};
 
 /**
 * @typedef  {Theme}   Theme                    - A collection of flavors, assigning a value to each of the theme variables.
@@ -2062,7 +2196,7 @@ export const positionContent = (content) => {
 * 
 *   - textFont:             Font family for the text strings.
 *   - textColor:            Text color.
-*   - textSize:             Font size. Preferrably defined in % values.
+*   - textSize:             Font size. Preferably defined in % values.
 * 
 *   - radius:               Border radius for container components.
 *   - borderWidth:          Border width for container components.
@@ -2085,20 +2219,21 @@ export const oneTheme = {
             backgroundColor: '#ffffff',
             primaryColor: '#094DFF',
             neutralColor: '#b1b0c5',
-            acceptColor:  '#60b33a',
+            acceptColor: '#60b33a',
             rejectColor: '#ff5100',
             lightColor: '#e9e8ee',
             darkColor: '#4c4b66',
 
             //Text
-            textFont: OSSPECIFICS.os === 'web' ? 'Avenir Next, Arial, sans-serif' : OSSPECIFICS.os === 'ios' ? 'Avenir Next' : 'Roboto',
+            textFont: OSSPECIFICS.os === 'web' ? 'Avenir Next, Arial, sans-serif' :
+                OSSPECIFICS.os === 'ios' ? 'Avenir Next' : 'Roboto',
             textColor: '#666488',
             textSize: 16,
             textWeight: 'normal',
 
             //Border
             radius: 10,
-            
+
             //Shadow
             shadow: {elevation: 0},
         },

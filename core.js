@@ -116,9 +116,15 @@ export const updateLanguage = (event) => {
 * button: {en: 'your input', es: 'su input'}}. Use a translator API.
 */
 export const readText = (id, language = getLanguage()) => {
-    if(!ONEJS.appText) {console.error('The text has not been setup in the app function.'); return;}
+    if(!ONEJS.appText) {
+        console.error('The text has not been setup in the app function.');
+        return;
+    }
     if(!ONEJS.appText[id]) {console.error('No such id: ' + id); return;}
-    if(language && !ONEJS.appText[id][language]) {console.error('No such language: ' + language); return;}
+    if(language && !ONEJS.appText[id][language]) {
+        console.error('No such language: ' + language);
+        return;
+    }
 
     if(typeof ONEJS.appText[id] === 'string') return ONEJS.appText[id];
     return ONEJS.appText[id][language];//TODO: If not retrieved for a certain language automatically translate
@@ -336,8 +342,9 @@ const readPathWithState = (path) => {
     //Path Includes State Variable
     if(finalPath.includes('<') && finalPath.includes('>')) {
         const stateId = (path.split('<')[1]).split('>')[0]; //Returns the stateId from in between the '<' '>' characters.
-        if(read(stateId) != null) finalPath = finalPath.replace('<' + stateId + '>',
-            read(stateId).toString());
+        if(read(stateId) != null) {
+            finalPath = finalPath.replace('<' + stateId + '>', read(stateId).toString());
+        }
         else return;//Returns undefined so that 'source/storage' functions avoid reading/writing from/to database
     }
     return finalPath;
@@ -567,8 +574,8 @@ const indexedDBRead = (path) => (stateId, context = '') => {
             try {
                 const transaction = ONEJS.idb.transaction(pathSegments[0], 'readonly');
                 const store = transaction.objectStore(pathSegments[0]);
-                const request = pathSegments.length > 1 ? 
-                store.get(pathSegments[1]) : store.getAll();//Depending of path segments, read entire collection or specific document
+                const request = pathSegments.length > 1 ?
+                    store.get(pathSegments[1]) : store.getAll();//Depending of path segments, read entire collection or specific document
                 request.onsuccess = function(data) {
                     write(stateId, request.result, 'indexedDB', 'update');
                 };
@@ -645,8 +652,8 @@ const indexedDBRemove = (path) => (documentId) => {
     try {
         const transaction = ONEJS.idb.transaction(pathSegments[0], 'readwrite');
         const store = transaction.objectStore(pathSegments[0]);
-        const request = pathSegments.length > 1 ? 
-        store.delete(parseInt(pathSegments[1])) : store.clear();//To remove entire collection or specific document
+        const request = pathSegments.length > 1 ?
+            store.delete(parseInt(pathSegments[1])) : store.clear();//To remove entire collection or specific document
         request.onerror = function(e) {console.error('Error: ', e.target.error.name);};
     }
     catch(error) {console.error("Error removing document:", error);}
@@ -879,16 +886,21 @@ const write = (stateId, newValue, context = '', action = 'update', documentId) =
     if(context === 'stateHistory') return;//If the context is 'stateHistory' do not perform any actions on the database
     saveState(stateId, oldValue, ONEJS.currentState[stateId].value, context, action, documentId);//Save the state configuration delta to be able to track the history of the state
 
-    if(ONEJS.currentState[stateId].removal && action === 'remove')
+    if(ONEJS.currentState[stateId].removal && action === 'remove') {
         ONEJS.currentState[stateId].removal(documentId);
-    if(ONEJS.currentState[stateId].storage && action !== 'remove')
-        ONEJS.currentState[stateId].storage(newValue, context, documentId);//Context checks if the source path is equal to the target path to avoid calling storage innecessarity
-    if(ONEJS.currentState[stateId].onChange)
-        ONEJS.currentState[stateId].onChange(oldValue, newValue, stateId);//Called to perform additional actions on change
-    if(ONEJS.currentState[stateId].alert)
-        window.dispatchEvent(new CustomEvent(stateId + 'stateChange', {detail: newValue}));//Called when the state variable is required to alert when changes by other state var. E.g.: user: /users/@userId, userID: '1234' (watched variable)
-    if(ONEJS.currentState[stateId].source && action === 'add')
-        ONEJS.currentState[stateId].source(stateId, context);//When adding a new document into a collection, source is called to retrieve from the database the id for the recently added document.
+    }
+    if(ONEJS.currentState[stateId].storage && action !== 'remove') {
+        ONEJS.currentState[stateId].storage(newValue, context, documentId);
+    }//Context checks if the source path is equal to the target path to avoid calling storage innecessarity
+    if(ONEJS.currentState[stateId].onChange) {
+        ONEJS.currentState[stateId].onChange(oldValue, newValue, stateId);
+    };//Called to perform additional actions on change
+    if(ONEJS.currentState[stateId].alert) {
+        window.dispatchEvent(new CustomEvent(stateId + 'stateChange', {detail: newValue}));
+    }//Called when the state variable is required to alert when changes by other state var. E.g.: user: /users/@userId, userID: '1234' (watched variable)
+    if(ONEJS.currentState[stateId].source && action === 'add') {
+        ONEJS.currentState[stateId].source(stateId, context);
+    }//When adding a new document into a collection, source is called to retrieve from the database the id for the recently added document.
 };
 
 /** 
@@ -999,8 +1011,9 @@ const setupState = (config) => {
         //Set default value for state variable
         ONEJS.currentState[stateId] = {};
         // ONEJS.currentState[stateId].value = value?.default ?? value;
-        if(value && typeof value === 'object' && value.hasOwnProperty('default'))
+        if(value && typeof value === 'object' && value.hasOwnProperty('default')) {
             ONEJS.currentState[stateId].value = value['default'];
+        }
         else ONEJS.currentState[stateId].value = value;
     });
 
@@ -1017,8 +1030,9 @@ const setupState = (config) => {
             ONEJS.currentState[stateId].removal = indexedDBRemove(value.storage.indexedDB);
             let collections = [value.storage.indexedDB.split('/').filter(Boolean)[0]];//Note: On collections better to avoid using state variables (@stateId)
 
-            if(value.storage.collections && value.storage.collections.length)
-                collections = value.storage.collections;//Array specifying which are the collections will be accessed. Only required for collection variable path.
+            if(value.storage.collections && value.storage.collections.length) {
+                collections = value.storage.collections;
+            }//Array specifying which are the collections will be accessed. Only required for collection variable path.
             collections.forEach(collection => {
                 indexedDBCollections.indexOf(collection) === -1 ?
                     indexedDBCollections.push(collection) : null;
@@ -1036,8 +1050,9 @@ const setupState = (config) => {
             }
         }
         //If defined by the user, use any function to set the storage. It will be called on write()
-        else if(value?.storage?.function) 
-        ONEJS.currentState[stateId].storage = value.storage.function;
+        else if(value?.storage?.function) {
+            ONEJS.currentState[stateId].storage = value.storage.function;
+        }
     });
 
     //3. set up the source functions and retrieve the initial values
@@ -1057,11 +1072,12 @@ const setupState = (config) => {
         //If defined by the user, use IndexedDB as the source option
         else if(value?.source?.indexedDB) {
             ONEJS.currentState[stateId].source = indexedDBRead(value.source.indexedDB);
-            if(readStateId(value.source.indexedDB))
-                ONEJS.currentState[readStateId(value.source.indexedDB)].alert = true;//In case the path includes a state variable, alert for changes
+            if(readStateId(value.source.indexedDB)) {
+                ONEJS.currentState[readStateId(value.source.indexedDB)].alert = true;
+            }//In case the path includes a state variable, alert for changes
             let collections = [value.source.indexedDB.split('/').filter(Boolean)[0]];//Note: On collections better to avoid using state variables (@stateId)
-            if(value.source.collections && value.source.collections.length)
-                collections = value.source.collections;//Array specifying which are the collections will be accessed. Only required for collection variable path.
+            if(value.source.collections && value.source.collections.length){
+                collections = value.source.collections;}//Array specifying which are the collections will be accessed. Only required for collection variable path.
             collections.forEach(collection => {
                 indexedDBCollections.indexOf(collection) === -1 ?
                     indexedDBCollections.push(collection) : null;
@@ -1292,8 +1308,10 @@ export const readStateHistory = () => {
 const memoizeComponent = (ComponentFunction, memoized, name) => {
     let memoizedComponent = ComponentFunction;
     if(name) {
-        if(!ONEJS.memoizedComponents[name]) ONEJS.memoizedComponents[name] = memoized ?
-            React.memo(ComponentFunction) : ComponentFunction;
+        if(!ONEJS.memoizedComponents[name]) {
+            ONEJS.memoizedComponents[name] = memoized ?
+                React.memo(ComponentFunction) : ComponentFunction;
+        }
         memoizedComponent = ONEJS.memoizedComponents[name];
     }
     return memoizedComponent;
@@ -1391,8 +1409,9 @@ const CreateComponentWithStructure = (name, ComponentFunction) => ({...attribute
 */
 const CreateComponentWithoutStructure = (name, ComponentFunction) => ({...attributes} = {}) => {
     if(name & attributes['memoized']) {//memoizeComponent cannot be called since passing the component function and returning the same reference creates a loop
-        if(!ONEJS.memoizedComponents[name])
+        if(!ONEJS.memoizedComponents[name]) {
             ONEJS.memoizedComponents[name] = React.memo(ComponentFunction);
+        }
         return React.createElement(ONEJS.memoizedComponents[name], attributes, null);
     }
     return React.createElement(ComponentFunction, attributes, null);
@@ -1410,8 +1429,9 @@ const CreateComponentWithoutStructure = (name, ComponentFunction) => ({...attrib
 * @returns {ReactElement} - The enhanced React element.
 */
 export const BaseComponent = (name, hasChildren, ComponentFunctionOrTag) => {
-    if(hasChildren) return CreateWrappedComponentWithStructure(name,
-        EnhancedComponent(ComponentFunctionOrTag));
+    if(hasChildren) {
+        return CreateWrappedComponentWithStructure(name, EnhancedComponent(ComponentFunctionOrTag));
+    }
     return CreateWrappedComponentWithoutStructure(name, EnhancedComponent(ComponentFunctionOrTag));
 };
 
@@ -1514,12 +1534,14 @@ const EnhancedComponent = (ComponentFunctionOrTag) => ({structure, flavor, style
             });
         }
     }
-    if(url && (OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android'))
+    if(url && (OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android')) {
         attributes['onPress'] = () => updateUrl(url);
+    }
 
     //If the structure is an array with missing 'key' property, then destructure the input; The structure array with n objects, becomes n arguments in the function
-    if(Array.isArray(structure) && structure?.length > 0 && structure?.[0]?.key == null)
+    if(Array.isArray(structure) && structure?.length > 0 && structure?.[0]?.key == null) {
         return React.createElement(ComponentFunctionOrTag, attributes, ...structure);
+    }
     return React.createElement(ComponentFunctionOrTag, attributes, structure);
 };
 
@@ -1571,9 +1593,9 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
     //*REACT SPECIFIC*
     const appFunction = ({state = {}, template} = {}) => {//Called on every rerender
         //Setup url variables
-        if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android')
+        if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') {
             [ONEJS.url, ONEJS.setUrl] = React.useState('/');
-
+        }
         //Set default value for state variables
         Object.entries(state).forEach(([stateId, value]) => {
             const reactInitialState = (value && typeof value === 'object' &&
@@ -1592,9 +1614,11 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
         if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') {
             //Setup url listener for native. Called before setup state in order to avoid the first call when ONEJS.url is first set.
             React.useEffect(() => {
-                if(initialized) ONEJS.urlStateVariables.forEach(
-                    stateVariable => write(stateVariable.stateId, readUrlData(stateVariable.url),
-                        'url', 'update'));
+                if(initialized) {
+                    ONEJS.urlStateVariables.forEach(stateVariable =>
+                        write(stateVariable.stateId, readUrlData(stateVariable.url),
+                            'url', 'update'));
+                }
             }, [ONEJS.url]);
             //Setup fonts for native. Called before setup state to take advantage of the async loading while the state is being set.
             if(font && typeof font === 'object') {
@@ -1755,14 +1779,17 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
 */
 const toStandardStyle = (themeVariableId, themeVariableValue) => {
     //Create shadow style object based on elevation property
-    if(themeVariableId === 'shadow' && typeof themeVariableValue === 'object')
+    if(themeVariableId === 'shadow' && typeof themeVariableValue === 'object') {
         return generateShadow(themeVariableValue);
+    }
     //Create gradient for texts
-    if(themeVariableId === 'textGradient' && typeof themeVariableValue === 'object')
+    if(themeVariableId === 'textGradient' && typeof themeVariableValue === 'object') {
         return generateGradient(themeVariableValue);
+    }
     //Create gradient for backgrounds
-    if(themeVariableId === 'backgroundGradient' && typeof themeVariableValue === 'object')
+    if(themeVariableId === 'backgroundGradient' && typeof themeVariableValue === 'object') {
         return generateGradient(themeVariableValue);
+    }
     //Create gradient for backgrounds and icons
     if(themeVariableId === 'primaryGradient' && typeof themeVariableValue === 'object') {
         const svgId = JSON.stringify(themeVariableValue).replace(/[^a-zA-Z0-9]/g, '');
@@ -1973,16 +2000,18 @@ export const generateGradient = ({colors, angle = 0, start, end, locations, svgI
         console.error('generateGradient: "colors" array must contain at least two items');
         return;
     }
-    if(!locations) locations = colors.map((color, index) =>
-        Number((index / (colors.length - 1)).toFixed(2)));
+    if(!locations) {
+        locations = colors.map((color, index) => Number((index / (colors.length - 1)).toFixed(2)));
+    }
     else if(locations && locations.length !== colors.length) {
         console.error('generateGradient: "colors" and "locations" arrays must be the same length.');
         return;
     }
 
     //CSS linear-gradient
-    if(OSSPECIFICS.os === 'web' && !svgId)
-        return 'linear-gradient(' + (90 - angle) + 'deg, ' + colors.join(', ') + ')';//Following the unit circle where the first color is in the origin and the rest in the direction of the angle
+    if(OSSPECIFICS.os === 'web' && !svgId) {
+        return 'linear-gradient(' + (90 - angle) + 'deg, ' + colors.join(', ') + ')';
+    }//Following the unit circle where the first color is in the origin and the rest in the direction of the angle
 
     //For native and SVG, transforms the angle into the start and end pair of [x,y] coordinates.
     if(start == null || end == null) {
@@ -2134,7 +2163,7 @@ export const positionContent = (content) => {
     if(content) {
         wrap = (content.wrap ?? false) ? 'wrap' : 'nowrap';
         direction = content.direction ?? 'row';
-        gap = content.gap ? {gap: gap} : {}; //Gap property is not yet implemented in React Native: https://github.com/facebook/yoga/issues/812
+        gap = content.gap ? {gap: content.gap} : {}; //Gap property is not yet implemented in React Native: https://github.com/facebook/yoga/issues/812
         longitudinal = direction === 'row' ? content.h ?? 'left' : content.v ?? 'top';  //In the content direction
         transversal = direction === 'row' ? content.v ?? 'top' : content.h ?? 'left'; //Transversal to the content direction
 

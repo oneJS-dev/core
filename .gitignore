@@ -15,3 +15,7 @@ npm-debug.log*
 # Dependency directories
 node_modules/
 package-lock.json
+
+# Docs
+jsdoc.config.js
+out

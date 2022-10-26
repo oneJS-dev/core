@@ -73,7 +73,8 @@ var ONEJS = {
 */
 export const getLanguage = () => {
     const localLanguage = localStorage.getItem('oneLanguage' + ONEJS.appName ?? '');
-    const userLanguage = OSSPECIFICS.userLanguage;
+    // const userLanguage = OSSPECIFICS.userLanguage;
+    const userLanguage = navigator.language || navigator.userLanguage;
     return localLanguage ?? userLanguage;
 };
 /** 
@@ -115,19 +116,50 @@ export const updateLanguage = (event) => {
 * @todo  Create website to send JS object with text configuration: {home: 'home', button: 'your input'} and return {home: {en: 'home', es: 'casa'}, 
 * button: {en: 'your input', es: 'su input'}}. Use a translator API.
 */
-export const readTextString = (id, language = getLanguage()) => {
+export const readTextData = (id, language = getLanguage()) => {
     if(!ONEJS.appText) {
         console.error('The text has not been setup in the app function.');
         return;
     }
     if(!ONEJS.appText[id]) {console.error('No such id: ' + id); return;}
-    if(language && !ONEJS.appText[id][language]) {
+    if(language) {
+        if(ONEJS.appText[id][language]) return readTextProperties(id, language);
+        //In many cases the browser uses the language + variant ISO notation while the app may only
+        //use the ISO two character code. E.g: browser: en-US, app: en
+        const isoLanguage = language.slice(0, 2);
+        if(ONEJS.appText[id][isoLanguage]) return readTextProperties(id, isoLanguage);;
+        //Return text in the default language
+        const defaultLanguage = ONEJS.appText['default'];
+        if(ONEJS.appText[id][defaultLanguage]) {
+            return readTextProperties(id, defaultLanguage);
+        }
         console.error('No such language: ' + language);
         return;
     }
 
-    if(typeof ONEJS.appText[id] === 'string') return ONEJS.appText[id];
-    return ONEJS.appText[id][language];//TODO: If not retrieved for a certain language automatically translate
+    // if(typeof ONEJS.appText[id] === 'string') return ONEJS.appText[id];
+    return;
+};
+const readTextProperties = (id, language) => {
+    //The properties to be searched
+    let targetProperties = ['type', 'link', 'emphasis', 'code', 'list'];
+    let properties = {};
+    let textObject = ONEJS.appText[id];
+    let languageObject = typeof ONEJS.appText[id][language] === 'object' ?
+        ONEJS.appText[id][language] : null;
+    properties.text = languageObject ? languageObject.text : textObject[language];
+    //Search properties
+    targetProperties.forEach(property => {
+        if(languageObject && languageObject[property]) {
+            properties[property] = languageObject[property];
+            if(property === 'type') properties.flavor = readFlavor(languageObject[property]);
+        }
+        else if(textObject[property]) {
+            properties[property] = textObject[property];
+            if(property === 'type') properties.flavor = readFlavor(textObject[property]);
+        }
+    });
+    return properties;
 };
 
 //=============================================================================
@@ -196,6 +228,10 @@ export const matchUrl = (url) => {
 */
 const readUrlData = url => {
     if(typeof url !== 'string') return;         //If not a string return undefined. This allows '' as a possible url.
+    if(url === ':') {                           //If url is ':', return the full actual url
+        return OSSPECIFICS.os === 'web' ?
+            decodeURI(location.pathname + location.search) : ONEJS.url;
+    }
     const urlToMatch = url.replaceAll(':', '*');//The url without the data ':' segments
     if(!matchUrl(urlToMatch)) {
         if(urlToMatch === url) return false;    //If the url does not match returns false (does not contain : segments)
@@ -207,10 +243,11 @@ const readUrlData = url => {
         decodeURI(location.pathname + location.search) : ONEJS.url;
     const actualUrl = actualUrlString.split('/').filter(Boolean);
     const targetUrl = url.split('/').filter(Boolean);
+    let urlData = []; //Enables inserting multiple ':' segments
     for(let i = 0; i < targetUrl.length; i++) {
-        if(targetUrl[i] === ':') return actualUrl[i];
+        if(targetUrl[i] === ':') urlData.push(actualUrl[i]);
     }
-    return;
+    return urlData.join('/');
 };
 
 /**
@@ -269,7 +306,7 @@ const setupUrl = (url) => component => { //Setup animation on property changes
 };
 
 /** 
-* @description Reads the current url to set the corresop>nding state variable. Subscribes to url changes.
+* @description Reads the current url to set the corresponding state variable. Subscribes to url changes.
 * Naming: '*' represents any value for a given segment. ':' represents the segment to extract the data from.
 * Use case: Update the value of a state variable that uses url as source
 * @param {String} url - The url to extract data from.
@@ -1079,8 +1116,9 @@ const setupState = (config) => {
                 ONEJS.currentState[readStateId(value.source.indexedDB)].alert = true;
             }//In case the path includes a state variable, alert for changes
             let collections = [value.source.indexedDB.split('/').filter(Boolean)[0]];//Note: On collections better to avoid using state variables (@stateId)
-            if(value.source.collections && value.source.collections.length){
-                collections = value.source.collections;}//Array specifying which are the collections will be accessed. Only required for collection variable path.
+            if(value.source.collections && value.source.collections.length) {
+                collections = value.source.collections;
+            }//Array specifying which are the collections will be accessed. Only required for collection variable path.
             collections.forEach(collection => {
                 indexedDBCollections.indexOf(collection) === -1 ?
                     indexedDBCollections.push(collection) : null;
@@ -1588,10 +1626,10 @@ const EnhancedComponent = (ComponentFunctionOrTag) => ({structure, flavor, style
 */
 export const App = ({name, state, theme, style, text, font, firestore}) => template => {
     ONEJS.appName = name;
-    ONEJS.appText = text;
-    ONEJS.style = style;
-    ONEJS.firestore = firestore;
-    setupTheme({theme: theme}); //Setting up before AppComponent for the css class order.
+    ONEJS.appText = (text && typeof text === 'object') ? {...text} : undefined;
+    ONEJS.style = (style && typeof style === 'object') ? {...style} : undefined;
+    ONEJS.firestore = (firestore && typeof firestore === 'object') ? {...firestore} : undefined;
+    setupTheme(theme); //Setting up before AppComponent for the css class order.
 
     //*REACT SPECIFIC*
     const appFunction = ({state = {}, template} = {}) => {//Called on every rerender
@@ -1922,17 +1960,14 @@ export const updateStyle = (styleName, attributeId) => value => {
 *   setupTheme({theme: theme, themeSetup: themeSetup});
 * ```
 */
-const setupTheme = ({theme, themeCollection = oneTheme} = {}) => {
+const setupTheme = themeConfig => {
     /*There are three options: 
         theme = null/undefined -> No theme is used
         theme = <string value> -> User wants to select one of the collection of themes from the theme collection
         theme = <object value> -> User wants to setup their own themes based on the relevant parameters
     */
-    if(!theme) return; //No theme is used
-    else if(typeof theme === 'string') {
-        if(themeCollection[theme]) theme = themeCollection[theme]; //Selects a certain theme from the collection
-        else console.error('setupTheme: Invalid theme: ' + theme);
-    }
+    if(!themeConfig) return; //No theme is used
+    const theme = themeGenerator(themeConfig);
 
     //Setup the ONEJS.theme object
     Object.entries(theme).forEach(([flavorId, flavorValue]) => { //Transform each of the themes in css variables stored in a class. This can now be applied to any component
@@ -2201,6 +2236,58 @@ export const positionContent = (content) => {
     };
 };
 
+/** 
+* @description Creates a CSS media query for the device specified. It works both on web and native.
+* @param {String} range - Indicates the type of range to generate the media query.
+*   - min: The minimum width to trigger the query will be the width the selected device.
+*   - max: The maximum width to trigger the query will be the width the selected device. Default.
+*   - match: The query will match the width range of the device or devices provided.
+* @param {String | Array<String>} device - Indicates the target device for the query.
+*   - phone: Any devices whose screen width ranges from 0 to 767.
+*   - tablet: Any device whose screen width ranges from 768 to 991.
+*   - laptop: Any device whose screen width ranges from 992 to 1199.
+*   - monitor: Any device whose screen width ranges from 1200 to 9999.
+* @param {Object} style - The style to be applied in the query.
+* @example
+* ```javascript 
+*   //Min width
+*   const textStyle = {
+*       color: 'black',
+*       ...media({range: 'min', device: 'table'})({color: 'pink'});
+*       //Devices with minimum a tablet's width will display a pink color
+*   }
+* ```
+* @returns {String} - The generated CSS media query.
+*/
+export const media = ({range = 'max', device} = {}) => style => {
+    if(!device) return {};
+    const deviceWidthRange = {
+        phone: [0, 767], tablet: [768, 991], laptop: [992, 1199], monitor: [1200, 9999]
+    };
+    if(!deviceWidthRange[device]) {
+        console.error('[oneJS] media: No such device: ' + device);
+        return {};
+    }
+    let mediaQuery = {};
+    if(range === 'min') {
+        mediaQuery[`@media (min-width: ${deviceWidthRange[device][0]}px)`] = style;
+        return mediaQuery;
+    }
+    if(range === 'max') {
+        mediaQuery[`@media (max-width: ${deviceWidthRange[device][1]}px)`] = style;
+        return mediaQuery;
+    }
+    if(range === 'match') {
+        if(!Array.isArray(device)) device = [device];
+        device.forEach(d => {
+            mediaQuery[`@media (min-width: ${deviceWidthRange[d][0]}px)`] = style;
+            mediaQuery[`@media (max-width: ${deviceWidthRange[d][0]}px)`] = style;
+        });
+        return mediaQuery;
+    }
+    return mediaQuery;
+};
+
 /**
 * @typedef  {Theme}   Theme                    - A collection of flavors, assigning a value to each of the theme variables.
 * @property {Object}  default                  - The default flavor to be applied if none are specified. It is required for every theme.
@@ -2245,18 +2332,19 @@ export const positionContent = (content) => {
 *   - shadow:               Backdrop shadow. It is generated by specifying the elevation of the component (from 0, closest to 24, furthest).
 * @type {Object}
 */
-const oneTheme = {
-    oneJS: { //Theme name
-        default: { //Flavor name
-            /* Best practice: Try to have as few theme variables as possible to and create as many flavors as needed giving values to these variables.
-               E.g. Rather than creating a color variable for every color in the app, create flavors giving different values to the 'primaryColor'.
-            */
+const themeGenerator = ({preset = 'oneJS', variables = {}, flavors = {}} = {}) => {
+    /* Best practice: Try to have as few theme variables as possible to and create as many flavors as needed giving values to these variables.
+        E.g. Rather than creating a color variable for every color in the app, create flavors giving different values to the 'primaryColor'.
+    */
+    const presetThemes = {
+        oneJS: {//Theme name
             //Color
             backgroundColor: '#ffffff',
             primaryColor: '#094DFF',
             neutralColor: '#b1b0c5',
             acceptColor: '#60b33a',
             rejectColor: '#ff5100',
+            warnColor: '#f7df00',
             lightColor: '#e9e8ee',
             darkColor: '#4c4b66',
 
@@ -2264,232 +2352,59 @@ const oneTheme = {
             textFont: OSSPECIFICS.os === 'web' ? 'Avenir Next, Arial, sans-serif' :
                 OSSPECIFICS.os === 'ios' ? 'Avenir Next' : 'Roboto',
             textColor: '#666488',
-            textSize: 16,
+            textSize: 18,
             textWeight: 'normal',
 
             //Border
             radius: 10,
+            borderWidth: 1,
+            borderStyle: 'solid',
+            borderColor: '#e9e8ee',
 
             //Shadow
             shadow: {elevation: 0},
-        },
-        border: {
-            borderWidth: 1,
-            borderStyle: 'solid',
-            borderColor: '#b1b0c5',
-        },
-        selected: {
-            primaryColor: '#094DFF', //primary color
-            textColor: '#666488',    //text color
-        },
-        unselected: {
-            primaryColor: '#b1b0c5', //neutral color
-            textColor: '#b1b0c5',    //neutral color
-        },
-        title: {
-            // textColor: '#333',
-            textColor: '#4c4b66',
-            textSize: 40,
-        },
-        subtitle: {
-            // textColor: '#666',
-            textColor: '#666488',
-            textSize: 30,
-        },
-        header: {
-            // textColor: '#666',
-            textColor: '#666488',
-            textSize: 20,
-        },
-        primaryGradient: {
-            primaryGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
-            backgroundGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
-            textGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
-        },
-        primaryGradientBackground: {
-            backgroundGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
-        },
-        primary: {
-            primaryColor: '#094DFF',
-            textColor: '#094DFF'
-        },
-        primaryBackground: {
-            backgroundColor: '#094DFF',
-        },
-        secondaryGradient: {
-            primaryGradient: {colors: ['#5902b5', '#3704b8'], angle: 45},
-            // backgroundGradient: {colors: ['#8a4fff', '#c252ff'], angle: 45}, //purple
-            // backgroundGradient: {colors: ['#60b33a', '#40acbd'], angle: 45}, //green
-            // backgroundGradient: {colors: ['#03fff7', '#03ffab'], angle: 45}, //neon green
-            backgroundGradient: {colors: ['#666488', '#4c4b66'], angle: 45}, //dark gray
-            // textGradient: {colors: ['#8a4fff', '#c252ff'], angle: 45}, //purple
-            // textGradient: {colors: ['#9238ff', '#ff386d'], angle: 45}, //pink
-            textGradient: {colors: ['#60b33a', '#40acbd'], angle: 45}, //green
-        },
-        sectionGradient: {
-            primaryGradient: {colors: ['#5902b5', '#3704b8'], angle: 45},
-            backgroundGradient: {colors: ['#ff386d', '#9238ff'], angle: 45},
+        }
+    };
+    const themeVariables = {...presetThemes[preset], ...variables};
+    const theme = {
+        default: {//Flavor Name
+            //Color
+            backgroundColor: themeVariables?.backgroundColor,
+            primaryColor: themeVariables?.primaryColor,
+            neutralColor: themeVariables?.neutralColor,
+            acceptColor: themeVariables?.acceptColor,
+            rejectColor: themeVariables?.rejectColor,
+            warnColor: themeVariables?.warnColor,
+            lightColor: themeVariables?.lightColor,
+            darkColor: themeVariables?.darkColor,
 
-            // backgroundGradient: {colors: ['white', '#ff386d', '#9238ff'], angle: 90},
-            textGradient: {colors: ['#8a4fff', '#c252ff'], angle: 45}, //purple
-            // textGradient: {colors: ['#9238ff', '#ff386d'], angle: 45}, //pink
-            textGradient: {colors: ['#60b33a', '#40acbd'], angle: 45}, //green
+            //Text
+            textFont: themeVariables?.textFont,
+            textColor: themeVariables?.textColor,
+            textSize: themeVariables?.textSize,
+            textWeight: themeVariables?.textWeight,
+
+            //Border
+            radius: themeVariables?.radius,
+            borderWidth: themeVariables?.borderWidth,
+            borderStyle: themeVariables?.borderStyle,
+            borderColor: themeVariables?.borderColor,
+
+            //Shadow
+            shadow: themeVariables?.shadow,
         },
-        // secondaryGradient: {//green
-        //     primaryGradient: {colors: ['#60b33a', '#40acbd'], angle: 45},
-        //     backgroundGradient: {colors: ['#60b33a', '#40acbd'], angle: 45},
-        //     textGradient: {colors: ['#60b33a', '#40acbd'], angle: 45},
-        // },
-        ternaryGradient: {
-            primaryGradient: {colors: ['#ff4400', '#ff7700'], angle: 45},
-            backgroundGradient: {colors: ['#ff4400', '#ff7700'], angle: 45},
-            textGradient: {colors: ['#ff4400', '#ff7700'], angle: 45},
-        },
-        silverGradient: {
-            primaryGradient: {colors: ['#a6a5bd', '#bcbdcd'], angle: 45},
-            backgroundGradient: {colors: ['#a6a5bd', '#bcbdcd'], angle: 45},
-            textGradient: {colors: ['#a6a5bd', '#bcbdcd'], angle: 45},
-        },
-        goldGradient: {
-            primaryGradient: {colors: ['#DBA514', '#B38728'], angle: 45},
-            backgroundGradient: {colors: ['#DBA514', '#B38728'], angle: 45},
-            // backgroundGradient: {colors: ['#BF953F', '#DBA514', '#B38728'], angle: 90},
-            textGradient: {colors: ['#a6a5bd', '#bcbdcd'], angle: 45},
-        },
-        purpleGradient: {
-            primaryGradient: {colors: ['#2600ff', '#d000ff'], angle: 45},
-            textGradient: {colors: ['#2600ff', '#d000ff'], angle: 45},
-        },
-        pinkGradient: {
-            primaryGradient: {colors: ['#e600ff', '#ff006f'], angle: 45},
-            textGradient: {colors: ['#e600ff', '#ff006f'], angle: 45},
-        },
-        redGradient: {
-            primaryGradient: {colors: ['#ff0059', '#ff5100'], angle: 45},
-            textGradient: {colors: ['#ff0059', '#ff5100'], angle: 45},
-        },
-        orangeGradient: {
-            primaryGradient: {colors: ['#ff6600', '#eeff00'], angle: 45},
-            textGradient: {colors: ['#ff6600', '#eeff00'], angle: 45},
-        },
-        yellowGradient: {
-            primaryGradient: {colors: ['#d9ff00', '#2fff00'], angle: 45},
-            textGradient: {colors: ['#d9ff00', '#2fff00'], angle: 45},
-        },
-        greenGradient: {
-            primaryGradient: {colors: ['#1aff00', '#00ff90'], angle: 45},
-            textGradient: {colors: ['#1aff00', '#00ff90'], angle: 45},
-        },
-        blueGradient: {
-            primaryGradient: {colors: ['#00ffa6', '#00aeff'], angle: 45},
-            textGradient: {colors: ['#00ffa6', '#00aeff'], angle: 45},
-        },
-        purpleGradientBackground: {
-            backgroundGradient: {colors: ['#2600ff', '#d000ff'], angle: 45},
-        },
-        pinkGradientBackground: {
-            backgroundGradient: {colors: ['#e600ff', '#ff006f'], angle: 45},
-        },
-        redGradientBackground: {
-            backgroundGradient: {colors: ['#ff0059', '#ff5100'], angle: 45},
-        },
-        orangeGradientBackground: {
-            backgroundGradient: {colors: ['#ff6600', '#eeff00'], angle: 45},
-        },
-        yellowGradientBackground: {
-            backgroundGradient: {colors: ['#d9ff00', '#2fff00'], angle: 45},
-        },
-        greenGradientBackground: {
-            backgroundGradient: {colors: ['#1aff00', '#00ff90'], angle: 45},
-        },
-        blueGradientBackground: {
-            backgroundGradient: {colors: ['#00ffa6', '#00aeff'], angle: 45},
-        },
-        neutral: {
-            // primaryColor: '#D9DADC',
-            // textColor: '#D9DADC'
-            primaryColor: '#b1b0c5',
-            textColor: '#b1b0c5'
-        },
-        neutralBackground: {
-            // backgroundColor: '#D9DADC',
-            backgroundColor: '#D9DADC',
-        },
-        gray: {
-            // primaryColor: '#666',
-            // textColor: '#666'
-            primaryColor: '#666488',
-            textColor: '#666488'
-        },
-        grayBackground: {
-            // backgroundColor: '#666',
-            backgroundColor: '#666488',
-        },
-        white: {
-            // primaryColor: '#666',
-            // textColor: '#666'
-            primaryColor: '#fff',
-            textColor: '#fff'
-        },
-        whiteBackground: {
-            // backgroundColor: '#666',
-            backgroundColor: '#fff',
-        },
-        dark: {
-            // primaryColor: '#333',
-            // textColor: '#333'
-            primaryColor: '#4c4b66',
-            textColor: '#4c4b66'
-        },
-        darkBackground: {
-            // backgroundColor: '#333',
-            backgroundColor: '#4c4b66',
-        },
-        darkGradient: {
-            primaryGradient: {colors: ['#666488', '#4c4b66'], angle: 45},
-            backgroundGradient: {colors: ['#666488', '#4c4b66'], angle: 45},
-            textGradient: {colors: ['#666488', '#4c4b66'], angle: 45},
-        },
-        light: {
-            // primaryColor: '#f1f1f1',
-            // textColor: '#f1f1f1'
-            primaryColor: '#e9e8ee',
-            textColor: '#e9e8ee'
-        },
-        lightBackground: {
-            // backgroundColor: '#f1f1f1',
-            backgroundColor: '#e9e8ee',
-        },
-        danger: {
-            primaryColor: '#ff0011',
-            textColor: '#ff0011'
-        },
-        dangerBackground: {
-            backgroundColor: '#ff0011',
-        },
-        disabled: {
-            primaryColor: '#D9DADC',
-            textColor: '#D9DADC'
-        },
-        disabledBackground: {
-            backgroundColor: '#D9DADC',
-        },
-        reverse: {
-            primaryColor: '#ffffff',
-            textColor: '#ffffff',
-            background: '#094DFF',
-        },
-        outline: { //For outlined icons and buttons
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            borderStyle: 'solid',
-            borderColor: '#094DFF',
-        },
+        //Shadow
         shadow: {
             shadow: {elevation: 10},
         },
         noShadow: {
             shadow: {elevation: 0},
+        },
+        //Border
+        border: {
+            borderWidth: 1,
+            borderStyle: 'solid',
+            borderColor: themeVariables?.borderColor,
         },
         noBorder: {
             borderWidth: 0,
@@ -2501,6 +2416,171 @@ const oneTheme = {
             borderWidth: 0,
             borderColor: 'transparent',
             radius: 0
-        }
+        },
+        //Text     
+        bold: {
+            textWeight: 'bold'
+        },
+        normal: {
+            textWeight: 'normal'
+        },
+        title: {
+            textWeight: 'bold',
+            textColor: themeVariables?.darkColor,
+            textSize: typeof themeVariables?.textSize === 'number' ?
+                themeVariables?.textSize * 3 : '300%'
+        },
+        header: {
+            textWeight: 'bold',
+            textColor: themeVariables?.darkColor,
+            textSize: typeof themeVariables?.textSize === 'number' ?
+                themeVariables?.textSize * 2 : '200%'
+        },
+        section: {
+            textWeight: 'bold',
+            textColor: themeVariables?.darkColor,
+            textSize: typeof themeVariables?.textSize === 'number' ?
+                Math.round(themeVariables?.textSize * 1.5) : '200%'
+        },
+        subsection: {
+            textWeight: 'bold',
+            textColor: themeVariables?.darkColor
+        },
+        summary: {
+            textSize: typeof themeVariables?.textSize === 'number' ?
+                Math.round(themeVariables?.textSize * 1.3) : '200%'
+        },
+        //Color 
+        reverse: {
+            primaryColor: themeVariables?.backgroundColor,
+            textColor: themeVariables?.backgroundColor,
+            background: themeVariables?.primaryColor,
+        },
+        selected: {
+            primaryColor: themeVariables?.primaryColor, //primary color
+            textColor: themeVariables?.primaryColor,    //text color
+        },
+        unselected: {
+            primaryColor: themeVariables?.neutralColor, //neutral color
+            textColor: themeVariables?.neutralColor,    //neutral color
+        },
+        primary: {
+            primaryColor: themeVariables?.primaryColor,
+            textColor: themeVariables?.primaryColor
+        },
+        primaryBackground: {
+            backgroundColor: themeVariables?.primaryColor,
+        },
+        primaryGradient: {
+            primaryGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
+            backgroundGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
+            textGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
+        },
+        primaryGradientBackground: {
+            backgroundGradient: {colors: [themeVariables?.primaryColor, '#1100ff'], angle: 45},
+        },
+        white: {
+            primaryColor: '#fff',
+            textColor: '#fff'
+        },
+        whiteBackground: {
+            backgroundColor: '#fff',
+        },
+        light: {
+            primaryColor: themeVariables?.lightColor,
+            textColor: themeVariables?.lightColor
+        },
+        lightBackground: {
+            backgroundColor: themeVariables?.lightColor
+        },
+        neutral: {
+            primaryColor: themeVariables?.neutralColor,
+            textColor: themeVariables?.neutralColor
+        },
+        neutralBackground: {
+            backgroundColor: themeVariables?.neutralColor,
+        },
+        dark: {
+            primaryColor: themeVariables?.darkColor,
+            textColor: themeVariables?.darkColor
+        },
+        darkBackground: {
+            backgroundColor: themeVariables?.darkBackground,
+        },
+        accept: {
+            primaryColor: themeVariables?.acceptColor,
+            textColor: themeVariables?.acceptBackground
+        },
+        acceptBackground: {
+            backgroundColor: themeVariables?.acceptBackground,
+        },
+        reject: {
+            primaryColor: themeVariables?.rejectColor,
+            textColor: themeVariables?.rejectColor
+        },
+        rejectBackground: {
+            backgroundColor: themeVariables?.rejectColor,
+        },
+        warn: {
+            primaryColor: themeVariables?.warnColor,
+            textColor: themeVariables?.warnColor
+        },
+        warnBackground: {
+            backgroundColor: themeVariables?.warnColor,
+        },
+        ...flavors
+    };
+    Object.keys(themeVariables).filter(v => v.includes('Color')).forEach(variableId => {
+        const colorName = variableId.replace('Color', '');
+        const color = themeVariables[variableId];
+        theme[colorName] = {
+            primaryColor: color,
+            textColor: color
+        };
+        theme[colorName + 'Background'] = {
+            backgroundColor: color
+        };
+        const color1 = transformColor(color, 15);
+        const color2 = transformColor(color, -15);
+        theme[colorName + 'Gradient'] = {
+            primaryGradient: {colors: [color1, color2], angle: 45},
+            backgroundGradient: {colors: [color1, color2], angle: 45},
+            textGradient: {colors: [color1, color2], angle: 45},
+        };
+    });
+    return {...theme, ...flavors};
+};
+
+const transformColor = (hex, delta = 0) => {
+    if(!hex || !delta) return '';
+    //Transform Hex into RGB
+    hex = hex.split('#').filter(Boolean).join('');
+    if(hex.length === 3) hex = [...hex].map(x => x + x).join('');
+    let r = parseInt(hex.slice(0, 2), 16);
+    let g = parseInt(hex.slice(2, 4), 16);
+    let b = parseInt(hex.slice(4, 6), 16);
+
+    //Transform RGB into HSL (rgb from 0 to 1 and h from 0 to 360 and s, l from 0 to 1)
+    r /= 255; g /= 255; b /= 255;
+    let v = Math.max(r, g, b), c = v - Math.min(r, g, b), f = (1 - Math.abs(v + v - c - 1));
+    let h = c && ((v == r) ? (g - b) / c : ((v == g) ? 2 + (b - r) / c : 4 + (r - g) / c));
+    h = 60 * (h < 0 ? h + 6 : h); const s = f ? c / f : 0; let l = (v + v - c) / 2;
+
+    //Transform Hue and Brightness
+    if(s > 0.1) h = Math.abs(h + delta);
+    else {
+        l *= 100;
+        l = ((l + delta) > 100) ? 100 : ((l + delta) < 0 ? 0 : l + delta);
+        l /= 100;
     }
+
+    //HSL to RGB (rgb from 0 to 1 and h from 0 to 360 and s, l from 0 to 1)
+    const a = s * Math.min(l, 1 - l);
+    const d = (n, k = (n + h / 30) % 12) => l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    r = d(0) * 255; g = d(8) * 255; b = d(4) * 255;
+
+    //RGB to hex
+    hex = '#' +
+        (Math.round(r << 16) + Math.round(g << 8) + Math.round(b)).toString(16).padStart(6, '0');
+    return hex;
 };

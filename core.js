@@ -43,8 +43,10 @@ var ONEJS = {
     urlStateVariables: [],     //The ids of the state variables to be updated on url changes 
     currentState: {},          //Current state of the app, contains the value of all state variables
     stateHistory: [],          //The history of modifications performed to the state
-    stateHistorySize: 10,      //Maximum length for the stateHistory array. Limits the amount of modifications stored
-    stateHistoryPosition: 0,   //Newest (current) state position is 0. Rewinding the state this value can be changed 
+    stateHistorySize: 10,      //Maximum length for the stateHistory array. Limits the amount of 
+                               //modifications stored
+    stateHistoryPosition: 0,   //Newest (current) state position is 0. Rewinding the state this 
+                               //value can be changed 
     fontsLoaded: false,        //Whether custom fonts have been loaded to enable first render. RN
 
     //Components Module    
@@ -80,6 +82,7 @@ export const getLanguage = () => {
 /** 
 * @description Sets the language defined by the user.
 * @param {String} languageISOCode - Chosen language in ISO format.
+* @returns {void}
 */
 export const setLanguage = (languageISOCode) => {
     localStorage.setItem('oneLanguage' + ONEJS.appName ?? '', languageISOCode);
@@ -99,7 +102,8 @@ export const updateLanguage = (event) => {
 };
 /** 
 * @description Reads the text for a certain language based on the text id. 
-* Prerequisites: Define all the texts in a single object and provide it as the "text" parameter to the app() function.
+* Prerequisites: Define all the texts in a single object and provide it as the "text" parameter to 
+* the app() function.
 * @param {String} id - The id of the text to be fetched.
 * @param {String} [language=user's default language] - The id of the text to be fetched.
 * @example
@@ -113,7 +117,8 @@ export const updateLanguage = (event) => {
 * readTextString('home') //Return 'home' for 'en' and 'casa' for 'es'
 * ```
 * @returns {String} Returns the text string for the corresponding language.
-* @todo  Create website to send JS object with text configuration: {home: 'home', button: 'your input'} and return {home: {en: 'home', es: 'casa'}, 
+* @todo  Create website to send JS object with text configuration: {home: 'home', button: 'your 
+* input'} and return {home: {en: 'home', es: 'casa'}, 
 * button: {en: 'your input', es: 'su input'}}. Use a translator API.
 */
 export const readTextData = (id, language = getLanguage()) => {
@@ -162,26 +167,25 @@ const readTextProperties = (id, language) => {
     return properties;
 };
 
-//=============================================================================
-// ROUTING SETUP: Internal methods to provide routing functionality for web.
-// Dynamic and declarative, just setup the url property of the View component
-// in order to:
-// 1. Toggle visibility: If the actual url matches the url visible property  
-//                       the element is displayed. 
-// 2. Toggle active:     If the actual url matches the url active property  
-//                       the element is displayed.
-// 3. Link routing:      The element changes the actual url to match the url
-//                       link property.
+//==================================================================================================
+//TODO: Update
+// ROUTING SETUP: Internal methods to provide routing functionality for web. Dynamic and 
+// declarative, just setup the url property of the View component in order to:
+// 1. Toggle visibility: If the actual url matches the url visible property the element is 
+//                       displayed. 
+// 2. Toggle active:     If the actual url matches the url active property the element is displayed.
+// 3. Link routing:      The element changes the actual url to match the url link property.
 // Example: 
 // const template => [View({url: {visible: '/home'}})('Home Screen'),
 //                    View({url: {link: '/home', active: 'home'}})([
 //                    Button()('Redirect to home screen'))];
-//=============================================================================
+//==================================================================================================
 
 /** 
 * @description Checks if the target url matches the actual page url.
 * Principles: All url-s must start with '/' because all url-s are absolute.
-* Naming: '*' represents any value for a given segment. At the end of the url, e.g.'/path/to/end/*' means any number of segments after
+* Naming: '*' represents any value for a given segment. At the end of the url, e.g.'/path/to/end/*'
+* means any number of segments after.
 * Note: The page root has a url '/'. This can only be matched by target url '/' or '* /'
 * Note: Actual url ignores anchors (root/home/#anchor/path === root/home)
 * @param {String} url - The url to be compared with the actual url.
@@ -196,10 +200,11 @@ const readTextProperties = (id, language) => {
 */
 export const matchUrl = (url) => {
     if(!url) return false;
-    //Filter added to remove the empty strings after split. E.g.: Root path is "/" and split converts to ['', '']. Filter turns into []
+    //Filter added to remove the empty strings after split. E.g.: Root path is "/" and split 
+    //converts to ['', '']. Filter turns into []
     const actualUrlString = OSSPECIFICS.os === 'web' ?
         decodeURI(location.pathname + location.search) : ONEJS.url;
-    const actualUrl = actualUrlString.split('/').filter(Boolean); //this url will always start with '/'
+    const actualUrl = actualUrlString.split('/').filter(Boolean); //this url always starts with '/'
     const targetUrl = url.split('/').filter(Boolean);
     if(targetUrl.length - actualUrl.length > 1 || (targetUrl.length - actualUrl.length === 1 &&
         targetUrl[targetUrl.length - 1] !== '*')) return false;
@@ -213,7 +218,8 @@ export const matchUrl = (url) => {
 
 /** 
 * @description If the url matches the current path, returns the value from the segment with ':'.
-* Naming: '*' represents any value for a given segment. ':' represents the segment to extract the data from.
+* Naming: '*' represents any value for a given segment. ':' represents the segment to extract the
+* data from.
 * Use case: Users can type any id in the url and retrieves the specific item from the database.
 * @param {String} url - The url to extract data from.
 * @example
@@ -281,6 +287,7 @@ const readUrlData = url => {
 * ```javascript 
 *   View({visible: read('isVisible'), onVisibleChange: update('isVisible'), url: {visible: '/home1', link: 'home2'}})('hello world');
 * ```
+* @returns {void}
 */
 const setupUrl = (url) => component => { //Setup animation on property changes
     const touchEvent = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) ||
@@ -321,6 +328,7 @@ const setupUrl = (url) => component => { //Setup animation on property changes
 *   //Actual url: '/path/events/event123'
 *   readUrl('/* /events/:')('eventId'); //Sets eventId = 'event123'
 * ```
+* @returns {void}
 */
 const readUrl = (url) => (stateId) => {
     write(stateId, readUrlData(url), 'url', 'update');
@@ -343,6 +351,7 @@ const readUrl = (url) => (stateId) => {
 *   updateurl('./sponsor'); //Actual Url = '/home/sponsor'
 *   updateurl('partners'); //Actual Url = '/home/partners'
 * ```
+* @returns {void}
 */
 const updateUrl = url => {
     if(typeof url !== 'string') return;
@@ -375,7 +384,9 @@ const updateUrl = url => {
 *   readPathWithState('events/<eventId>') //eventId = undefined, Returns undefined
 * ``` 
 * @returns {String} Returns the path after replacing the '<stateId>' with the corresponding value.
-* @todo Discarded idea: Besides @stateId, we could also implement :, to combine and retrieve the value for both the state and url data. (Creates confusion, final decision is to only use state variables)
+* @todo Discarded idea: Besides @stateId, we could also implement :, to combine and retrieve the
+* value for both the state and url data. (Creates confusion, final decision is to only use state 
+* variables)
 */
 const readPathWithState = (path) => {
     let finalPath = path;
@@ -401,7 +412,7 @@ const readPathWithState = (path) => {
 // const state = {events: {default: [], source: {firestore: 'events'}, 
 //     storage: {firestore: 'events'}}, ...};
 // 3. Intialize the app() function with the firestore database
-// app({template: template, state: state, firestore:firestoreDB});
+// app({component: App, state: state, firestore:firestoreDB});
 //
 //=============================================================================
 
@@ -415,6 +426,7 @@ const readPathWithState = (path) => {
 *   const state = {eventId: 'event123', myEvent: source{firestore: {'events/@eventId'}} }
 *   firestoreGetDataOnce('events/@eventId')(myEvent);// If eventId = 'event123', sets myEvent = {obj} which is the database value for the path = 'events/event123'
 * ``` 
+* @returns {void}
 */
 const firestoreGetDataOnce = async (path, stateId) => {
     if(!read(readStateId(path))) return; //If the state is not defined return undefined
@@ -456,6 +468,7 @@ const firestoreGetDataOnce = async (path, stateId) => {
 *   path = events/@eventId  //Replaces @eventId (calling readPathWithState) with state variable value and returns event object
 * ``` 
 * @todo Discarded idea: Besides @stateId, we could also implement :, to combine and retrieve the value for both the state and url data. (Creates confusion as paths and urls are not the same)
+* @returns {void}
 */
 const firestoreRead = (path) => (stateId, context = '') => {
     if(context === 'firestore') return;
@@ -509,6 +522,7 @@ const firestoreRead = (path) => (stateId, context = '') => {
 *   path = @collection       data = {event}; //Warning: Not a good pattern to use variables at collection level for security reasons. 
 *                                            //Replaces @collection with state variable value and adds a new document to the collection.
 * ```
+* @returns {void}
 */
 const firestoreWrite = (path) => async (data, context = '', documentId) => {
     if(context === 'firestore') return;//This means firestore has read a value and is updating the state, no need to write to the database 
@@ -543,6 +557,7 @@ const firestoreWrite = (path) => async (data, context = '', documentId) => {
 *   path = events/event123;  data = {event}; //Removes document with id 'event123'
 *   path = events/@eventId;  data = {event}; //Replaces @eventId (calling readPathWithState) with state variable value and removes document
 * ```
+* @returns {void}
 */
 const firestoreRemove = (path) => async (documentId) => {
     if(!path) return;
@@ -575,7 +590,7 @@ const firestoreRemove = (path) => async (documentId) => {
 // const state = {events: {default: [], source: {indexedDB: 'events'}, 
 //     storage: {indexedDB: 'events'}}, ...};
 // 2. Intialize the app() function with the firestore database
-// app({template: template, state: state});
+// app({component: App, state: state, firestore: firestore});
 //
 //=============================================================================
 
@@ -603,6 +618,7 @@ const firestoreRemove = (path) => async (documentId) => {
 *   path = @collectionId    //Returns array of events []. This is not recommended for security reasons, state variables in the path should be at document level
 *   path = events/@eventId  //Replaces @eventId (calling readPathWithState) with state variable value and returns event object
 * ``` 
+* @returns {void}
 */
 const indexedDBRead = (path) => (stateId, context = '') => {
     if(context === 'indexedDB') return;
@@ -654,6 +670,7 @@ const indexedDBRead = (path) => (stateId, context = '') => {
 *                                            //Replaces @collection with state variable value and adds a new document to the collection.
 *   path = events/@eventId;  data = {event}; //Replaces @eventId (calling readPathWithState) with state variable value and updates document with {event}
 * ```
+* @returns {void}
 */
 const indexedDBWrite = (path) => (data, context = '', documentId) => {
     if(context === 'indexedDB') return;
@@ -684,6 +701,7 @@ const indexedDBWrite = (path) => (data, context = '', documentId) => {
 *   path = events/event123;  //Removes document with id 'event123'
 *   path = events/@eventId;  //Replaces @eventId (calling readPathWithState) with state variable value and removes document
 * ```
+* @returns {void}
 */
 const indexedDBRemove = (path) => (documentId) => {
     if(!path) return;
@@ -726,6 +744,7 @@ const indexedDBRemove = (path) => (documentId) => {
 * ```javascript 
 *    path = userId //Returns the stored value for userId {id: '123', name: 'user'}
 * ```
+* @returns {void}
 */
 const localStorageRead = (path) => (stateId) => {
     try {
@@ -747,6 +766,7 @@ const localStorageRead = (path) => (stateId) => {
 * ```javascript 
 *   path = 'userData'; data = {id: '123', name: 'user'}; //Pushes {data} in 'userData' document
 * ```
+* @returns {void}
 */
 const localStorageWrite = (path) => (data, context = '') => {
     if(context === 'localStorage') return;
@@ -764,6 +784,7 @@ const localStorageWrite = (path) => (data, context = '') => {
 * ```javascript 
 *   path = userId; //Removes userId document
 * ```
+* @returns {void}
 */
 const localStorageRemove = (path) => () => {
     try {
@@ -796,6 +817,7 @@ const localStorageRemove = (path) => () => {
 * ```javascript 
 *    path = userId //Returns the stored value for userId {id: '123', name: 'user'}
 * ```
+* @returns {void}
 */
 const nativeStorageRead = (path) => async (stateId) => {
     try {
@@ -817,6 +839,7 @@ const nativeStorageRead = (path) => async (stateId) => {
 * ```javascript 
 *   path = 'userData'; data = {id: '123', name: 'user'}; //Pushes {data} in 'userData' document
 * ```
+* @returns {void}
 */
 const nativeStorageWrite = (path) => async (data, context = '') => {
     if(context === 'AsyncStorage') return;
@@ -835,6 +858,7 @@ const nativeStorageWrite = (path) => async (data, context = '') => {
 * ```javascript 
 *   path = userId; //Removes userId document
 * ```
+* @returns {void}
 */
 const nativeStorageRemove = (path) => async () => {
     try {
@@ -891,6 +915,7 @@ export const read = (stateId) => {
 * ```javascript 
 *   write('events', {id: '123', name: {'party'}}, 'app', 'arrayUpdate', '123');
 * ```
+* @returns {void}
 */
 const write = (stateId, newValue, context = '', action = 'update', documentId) => {
     const oldValue = ONEJS.currentState[stateId].value;
@@ -955,6 +980,7 @@ const write = (stateId, newValue, context = '', action = 'update', documentId) =
 *   const template = () => [Input({ type: 'text, onInput: add('events') })];
 *   const template = () => [Button({ onClick: (e) => add('events')({id: '123', name: {'party'}}) })]; 
 * ```
+* @returns {void}
 */
 export const add = (stateId) => event => {
     const newValue = (event?.target) ?
@@ -977,6 +1003,7 @@ export const add = (stateId) => event => {
 *   const template = () => [Input({ type: 'text, onInput: update('userId') })]; //Every time the input changes updates the value of 'user'
 *   const template = () => [Button({ onClick: (e) => update('events', '123')({name: 'new party'}) })]; //Every time is clicked sets the same value
 * ```
+* @returns {void}
 */
 export const update = (stateId, documentId) => (event) => {
     // if(typeof constValue !== 'undefined') write(stateId, constValue);//For the moment not adding this option update = (stateId, constValue) => (event), it is anti-pattern
@@ -997,6 +1024,7 @@ export const update = (stateId, documentId) => (event) => {
 *   const template = () => [Button({ onClick: (e) => remove('userId') })]; //Every time is clicked sets 'userId' to undefined
 *   const template = () => [Button({ onClick: (e) => remove('events', '123') })]; //Every time removes event '123' from the 'events' array
 * ```
+* @returns {void}
 */
 export const remove = (stateId, documentId) => {
     const newValue = undefined;
@@ -1041,6 +1069,7 @@ export const remove = (stateId, documentId) => {
 *       selectedEvent: {default: {}, source: {firestore: 'events/@selectedEventId'}, storage: {firestore: 'events/@selectedEventId'}}
 *   }
 * ```
+* @returns {void}
 */
 const setupState = (config) => {
     const indexedDBCollections = [];  //All the collections required to be initialized for indexedDB 
@@ -1211,6 +1240,7 @@ const setupState = (config) => {
 * ```javascript 
 *   saveState('events', {id: '123', name: {'party'}}, 'app', 'arrayUpdate', '123');
 * ```
+* @returns {void}
 */
 const saveState = (stateId, oldValue, newValue, context, action, documentId) => {//0 is the current state, 1 would be the previous state, ... until stateHistorySize.
     if(context === 'stateHistory') return;//This occurs rewind or fastForward functions are being used, therefore no new state needs to be saved.
@@ -1232,6 +1262,7 @@ const saveState = (stateId, oldValue, newValue, context, action, documentId) => 
 * ```javascript 
 *   const template = () => [Button({ onClick: (e) => goToState(4) })]; //Rewinds the state history to the slot number 4 in the array.
 * ```
+* @returns {void}
 * @todo Implement reversal actions: add -> removeArray, update -> update, updateArray -> updateArray, remove -> update, removeArray -> add
 * It is challenge to undo add action: for removeArray we need the id of the document added which is not stored. Knowing that 'add' always pushes the document 
 * at the end of the array, it could be undone by always removing the last element.
@@ -1265,6 +1296,7 @@ export const goToState = (statePosition) => {
 *   const template = () => [Button({ onClick: (e) => nextState() })]; //Goes to the next state in the history
 * ```
 * @todo Until goToState() is fixed it is not production ready.
+* @returns {void}
 */
 export const nextState = () => {
     const statePosition = ONEJS.stateHistoryPosition - 1;
@@ -1277,19 +1309,21 @@ export const nextState = () => {
 *   const template = () => [Button({ onClick: (e) => previousState() })]; //Goes to the previous state in the history
 * ```
 * @todo Until goToState() is fixed it is not production ready.
+* @returns {void}
 */
 export const previousState = () => {
     const statePosition = ONEJS.stateHistoryPosition + 1;
     goToState(statePosition);
 };
 /** 
-* @description Returns the complete stateHistory array containing the stored modifications to the state 
+* @description Returns the complete stateHistory array containing the stored modifications to the state.
 * @example
 * ```javascript 
 *   readStateHistory().map((value, index) => View()([ View()('Id: ' + value.stateId),
 *                                                     View()('Old: ' + value.oldValue), 
 *                                                     View()('New: ' + value.newValue) ]));
 * ```
+* @returns {Array} The complete stateHistory array.
 */
 export const readStateHistory = () => {
     return ONEJS.stateHistory;
@@ -1609,22 +1643,22 @@ const EnhancedComponent = (ComponentFunctionOrTag) => ({structure, flavor, style
 * @example
 * Simple Hello World example:
 * ```javascript 
-* app({template: ()=>"Hello World"});
+* app({component: ()=>"Hello World"});
 * ```
 * @example
 * Complete Example:
 * ```javascript 
 *   const name = 'myApp';
-*   const template = () => [Text()(readTextString('title')), Text()(readTextString('greeting') + ': ' + read('inputText')), Input({value: read('inputText', onInput: update('inputText'))})];
+*   const App = () => [Text()(readTextString('title')), Text()(readTextString('greeting') + ': ' + read('inputText')), Input({value: read('inputText', onInput: update('inputText'))})];
 *   const state = {inputText: {default: 'myApp'}}
 *   const theme = {default: {primaryColor: 'blue'}};
 *   const text = {title: 'My App',  greeting: {en: 'Hello', es: 'Hola'}};
 *   const firestore = initializeApp(config).getFirestore();
-*   app({name: name, template: template, state: state, theme: theme, themeSetup: themeSetup, text: text, firestore: firestore})
+*   app({name: name, component: App, state: state, theme: theme, themeSetup: themeSetup, text: text, firestore: firestore})
 * ```
 * @returns {ReactElement} - The complete app component.
 */
-export const App = ({name, state, theme, style, text, font, firestore}) => template => {
+export const app = ({name, component, state, theme, style, text, font, firestore}) => {
     ONEJS.appName = name;
     ONEJS.appText = (text && typeof text === 'object') ? {...text} : undefined;
     ONEJS.style = (style && typeof style === 'object') ? {...style} : undefined;
@@ -1632,7 +1666,7 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
     setupTheme(theme); //Setting up before AppComponent for the css class order.
 
     //*REACT SPECIFIC*
-    const appFunction = ({state = {}, template} = {}) => {//Called on every rerender
+    const appFunction = ({state = {}, component} = {}) => {//Called on every rerender
         //Setup url variables
         if(OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') {
             [ONEJS.url, ONEJS.setUrl] = React.useState('/');
@@ -1692,8 +1726,7 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
             initialized.current = true;
         }
 
-        if(!ONEJS.appTemplate) ONEJS.appTemplate = template();
-        const structure = template(); //Template needs to be a function, otherwise the code is executed and the elements are not wrapped by reactCreateElement function
+        const structure = component(); //Template needs to be a function, otherwise the code is executed and the elements are not wrapped by reactCreateElement function
         if((OSSPECIFICS.os === 'ios' || OSSPECIFICS.os === 'android') && font &&
             typeof font === 'object' && !ONEJS.fontsLoaded) return null; //Wait until fonts are loaded
         if(Array.isArray(structure) && structure?.length > 0 && structure?.[0]?.key == null) {
@@ -1719,7 +1752,7 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
     }
 
     //Render the app in the appropiate container
-    const AppComponent = React.createElement(appFunction, {state: state, template: template}, null);
+    const AppComponent = React.createElement(appFunction, {state: state, component: component}, null);
     if(os === 'web') {
         const container = document.getElementById('app'); //document.body; //Using body is discouraged by React
         if(!container) {
@@ -1763,7 +1796,7 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
 //    const myThemeSetup = {p: {color: readFlavor('default').primaryColor}};
 // 3. Initialize the app with these two objects and use the theme variables inside
 //    your custom components to inherit the look and feel.   
-//    app({template: template, theme:myTheme, themeSetup: myThemeSetup});
+//    app({component: App, theme:myTheme, themeSetup: myThemeSetup});
 //    Text({flavor: 'error'})('My Text'); //Use flavor
 //
 // Native Principles:
@@ -1796,7 +1829,7 @@ export const App = ({name, state, theme, style, text, font, firestore}) => templ
 // 3. Initialize the app providing the theme object and use the theme variables inside
 //    your custom component instantiation to customize the look and feel attributes
 //    exposed in the declaration.   
-//    app({template: template, theme:myTheme});
+//    app({component: App, theme:myTheme});
 //    Text({flavor: 'error'})('My Text'); //Use flavor
 //
 // Other approaches to define global and reusable theming:
@@ -1893,6 +1926,7 @@ export const readFlavor = (...flavorName) => {
 *   updateFlavor('myFlavor', 'primaryColor')('red'); 
 *   updateFlavor('myFlavor')({primaryColor: 'red', radius: '0px', shadow: null}); 
 * ```
+* @returns {void}
 */
 export const updateFlavor = (flavorName, themeVariableId) => value => {
     if(!ONEJS.style?.flavorName) {
@@ -1937,6 +1971,7 @@ export const readStyle = (...styleName) => {
 *   updateStyle('navbar', 'background')('red'); 
 *   updateStyle('navbar')({background: 'red', borderRadius: '0px', color: 'black'}); 
 * ```
+* @returns {void}
 */
 export const updateStyle = (styleName, attributeId) => value => {
     if(!ONEJS.style?.styleName) {
@@ -1959,6 +1994,7 @@ export const updateStyle = (styleName, attributeId) => value => {
 *   const themeSetup = {p: {color: themeVariable('primaryColor')}};
 *   setupTheme({theme: theme, themeSetup: themeSetup});
 * ```
+* @returns {void}
 */
 const setupTheme = themeConfig => {
     /*There are three options: 
@@ -2192,7 +2228,6 @@ export const mergeStyles = (...styles) => {
 * ```
 * @returns {Object} - The CSS properties for the Flexbox.
 * @todo Create a 'positons' object, similar to 'animations', with a set of predefined positions to choose from (rather than parsing the text).
-* @todo add gap variable
 */
 export const positionContent = (content) => {
     let direction = 'row';          //Direction of the content. Row: Content flows along the x-axis (horizontal). Column: Content flows along the y-axis (vertical).

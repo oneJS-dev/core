@@ -2240,7 +2240,7 @@ export const positionContent = (content) => {
     if(content) {
         wrap = (content.wrap ?? false) ? 'wrap' : 'nowrap';
         direction = content.direction ?? 'row';
-        reverse = direction.search('reverse') > -1 ? true : false; //True if direction is 'row-reverse' or 'column-reverse'
+        const reverse = direction.search('reverse') > -1 ? true : false; //True if direction is 'row-reverse' or 'column-reverse'
         gap = content.gap ? {gap: content.gap} : {}; //Gap property is not yet implemented in React Native: https://github.com/facebook/yoga/issues/812
         longitudinal = direction === 'row' || direction === 'row-reverse' ?
             content.h ?? 'left' : content.v ?? 'top';  //In the content direction

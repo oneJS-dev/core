@@ -2240,16 +2240,22 @@ export const positionContent = (content) => {
     if(content) {
         wrap = (content.wrap ?? false) ? 'wrap' : 'nowrap';
         direction = content.direction ?? 'row';
+        reverse = direction.search('reverse') > -1 ? true : false; //True if direction is 'row-reverse' or 'column-reverse'
         gap = content.gap ? {gap: content.gap} : {}; //Gap property is not yet implemented in React Native: https://github.com/facebook/yoga/issues/812
-        longitudinal = direction === 'row' ? content.h ?? 'left' : content.v ?? 'top';  //In the content direction
-        transversal = direction === 'row' ? content.v ?? 'top' : content.h ?? 'left'; //Transversal to the content direction
+        longitudinal = direction === 'row' || direction === 'row-reverse' ?
+            content.h ?? 'left' : content.v ?? 'top';  //In the content direction
+        transversal = direction === 'row' || direction === 'row-reverse' ? 
+            content.v ?? 'top' : content.h ?? 'left'; //Transversal to the content direction
 
         //Options for longitudinal alignment in CSS (justify-content): flex-start | flex-end | center | space-between | space-around | space-evenly | start | end | left | right
         //Options for longitudinal alignment in oneJS: left, center, right (for rows). top, center, bottom (for cols). space, distribute (for both)
         if(longitudinal === 'center') longitudinal = longitudinal;
-        else if(longitudinal === 'bottom' || longitudinal === 'right') longitudinal = 'flex-end';
+        else if(longitudinal === 'bottom' || longitudinal === 'right') {
+            longitudinal = reverse ? 'flex-start' : 'flex-end';
+        }
         else if(longitudinal === 'distribute') longitudinal = 'space-around';
         else if(longitudinal === 'space') longitudinal = 'space-between';
+        else if(reverse) longitudinal = 'flex-end';
         else longitudinal = 'flex-start';
 
         //Options for transversal alignemnt in CSS (align-items): stretch | flex-start | flex-end | center | baseline | first baseline | last baseline | start | end | self-start | self-end

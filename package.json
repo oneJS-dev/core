@@ -1,6 +1,6 @@
 {
   "name": "@onejs-dev/core",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "Core functions for oneJS apps.",
   "main": "core.js",
   "scripts": {

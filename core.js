@@ -2489,7 +2489,7 @@ const themeGenerator = ({preset = 'oneJS', variables = {}, flavors = {}} = {}) =
         reverse: {
             primaryColor: themeVariables?.backgroundColor,
             textColor: themeVariables?.backgroundColor,
-            background: themeVariables?.primaryColor,
+            backgroundColor: themeVariables?.primaryColor,
         },
         selected: {
             primaryColor: themeVariables?.primaryColor, //primary color
@@ -2506,14 +2506,14 @@ const themeGenerator = ({preset = 'oneJS', variables = {}, flavors = {}} = {}) =
         primaryBackground: {
             backgroundColor: themeVariables?.primaryColor,
         },
-        primaryGradient: {
-            primaryGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
-            backgroundGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
-            textGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
-        },
-        primaryGradientBackground: {
-            backgroundGradient: {colors: [themeVariables?.primaryColor, '#1100ff'], angle: 45},
-        },
+        // primaryGradient: {
+        //     primaryGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
+        //     backgroundGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
+        //     textGradient: {colors: ['#0099ff', '#1100ff'], angle: 45},
+        // },
+        // primaryGradientBackground: {
+        //     backgroundGradient: {colors: [themeVariables?.primaryColor, '#1100ff'], angle: 45},
+        // },
         white: {
             primaryColor: '#fff',
             textColor: '#fff'
@@ -2565,7 +2565,11 @@ const themeGenerator = ({preset = 'oneJS', variables = {}, flavors = {}} = {}) =
         },
         ...flavors
     };
-    Object.keys(themeVariables).filter(v => v.includes('Color')).forEach(variableId => {
+    const colors = [
+        'primaryColor', 'neutralColor', 'acceptColor', 'rejectColor', 'warnColor', 'lightColor',
+        'darkColor',
+    ];
+    Object.keys(themeVariables).filter(v => {return colors.indexOf(v) > -1}).forEach(variableId => {
         const colorName = variableId.replace('Color', '');
         const color = themeVariables[variableId];
         theme[colorName] = {

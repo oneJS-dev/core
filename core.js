@@ -429,7 +429,7 @@ const readPathWithState = (path) => {
 * @returns {void}
 */
 const firestoreGetDataOnce = async (path, stateId) => {
-    if(!read(readStateId(path))) return; //If the state is not defined return undefined
+    if(!read(readPathWithState(path))) return; //If the state is not defined return undefined
     if(path.split('/').length % 2 === 0) {
         const docRef = doc(ONEJS.firestore, readPathWithState(path));
         try {
@@ -474,7 +474,7 @@ const firestoreRead = (path) => (stateId, context = '') => {
     if(context === 'firestore') return;
     if(!path) return;
     else if(path.includes('@') && context === 'initialize') {//Subscribes for state changes during 'setupState' initialization
-        window.addEventListener(readStateId(path) + 'stateChange',
+        window.addEventListener(readPathWithState(path) + 'stateChange',
             async (e) => {firestoreGetDataOnce(path, stateId);}, false);//Called on state updates
         firestoreGetDataOnce(path, stateId);//Pulls data once for the first time
     }
@@ -624,8 +624,8 @@ const indexedDBRead = (path) => (stateId, context = '') => {
     if(context === 'indexedDB') return;
     if(!path) return;
     if(path.includes('@') && context === 'initialize') {//Subscribes for state changes during 'setupState' initialization
-        window.addEventListener(readStateId(path) + 'stateChange', async (e) => {//Note: e.detail also contains the newState
-            if(!read(readStateId(path))) return;//If the state is not defined return.
+        window.addEventListener(readPathWithState(path) + 'stateChange', async (e) => {//Note: e.detail also contains the newState
+            if(!read(readPathWithState(path))) return;//If the state is not defined return.
             const pathSegments = readPathWithState(path).split('/').filter(Boolean);
             try {
                 const transaction = ONEJS.idb.transaction(pathSegments[0], 'readonly');
@@ -1132,8 +1132,8 @@ const setupState = (config) => {
         }
         //If defined by the user, use Firestore database as the source of data.
         else if(value?.source?.firestore) {
-            if(readStateId(value.source.firestore)) {
-                ONEJS.currentState[readStateId(value.source.firestore)].alert = true;//In case the path includes a state variable, alert for changes
+            if(readPathWithState(value.source.firestore)) {
+                ONEJS.currentState[readPathWithState(value.source.firestore)].alert = true;//In case the path includes a state variable, alert for changes
                 ONEJS.currentState[stateId].source = firestoreRead(value.source.firestore);//This is required for collections, when we insert a document by querying the source we retrieve the document id
             }
             firestoreRead(value.source.firestore)(stateId, 'initialize');
@@ -1141,8 +1141,8 @@ const setupState = (config) => {
         //If defined by the user, use IndexedDB as the source option
         else if(value?.source?.indexedDB) {
             ONEJS.currentState[stateId].source = indexedDBRead(value.source.indexedDB);
-            if(readStateId(value.source.indexedDB)) {
-                ONEJS.currentState[readStateId(value.source.indexedDB)].alert = true;
+            if(readPathWithState(value.source.indexedDB)) {
+                ONEJS.currentState[readPathWithState(value.source.indexedDB)].alert = true;
             }//In case the path includes a state variable, alert for changes
             let collections = [value.source.indexedDB.split('/').filter(Boolean)[0]];//Note: On collections better to avoid using state variables (@stateId)
             if(value.source.collections && value.source.collections.length) {

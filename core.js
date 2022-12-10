@@ -897,9 +897,14 @@ const nativeStorageRemove = (path) => async () => {
 * ```
 * @returns {String} Returns the value for the corresponding state variable.
 */
-export const read = (stateId) => {
+export const read = (stateId, documentId) => {
     // return ONEJS.reactState[stateId];//Not reading from React directly as writing the state takes some time and when read is called the value is not updated.
     // return ONEJS.currentState[stateId] != null ? ONEJS.currentState[stateId].value : undefined;
+    //Find documentId in array
+    if(documentId) {
+        return ONEJS.currentState[stateId]?.value[ONEJS.currentState[stateId].value.findIndex(
+            doc => doc.id === documentId)] 
+    }
     return ONEJS.currentState[stateId]?.value;
 };
 

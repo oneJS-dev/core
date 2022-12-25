@@ -932,9 +932,11 @@ const write = (stateId, newValue, context = '', action = 'update', documentId) =
     }
     else if(action === 'remove') {
         if(documentId != null) {//Remove value from array state variable
-            ONEJS.currentState[stateId].value.splice(ONEJS.currentState[stateId].value.findIndex(
-                doc => doc.id === documentId), 1);
+            const index = ONEJS.currentState[stateId].value.findIndex(doc => doc.id === documentId);
+            if(index === -1) return;
+            ONEJS.currentState[stateId].value.splice(index, 1);
             ONEJS.reactSetState[stateId]([...ONEJS.currentState[stateId].value]);
+            
         }
         else {//Remove the value from the state variable
             newValue = Array.isArray(oldValue) ? [] : undefined;
@@ -943,8 +945,9 @@ const write = (stateId, newValue, context = '', action = 'update', documentId) =
         }
     }
     else if(action === 'updateArray') {//Update value from array state variable
-        ONEJS.currentState[stateId].value[ONEJS.currentState[stateId].value.findIndex(
-            doc => doc.id === documentId)] = newValue;
+        const index = ONEJS.currentState[stateId].value.findIndex(doc => doc.id === documentId);
+        if(index === -1) return;
+        ONEJS.currentState[stateId].value[index] = newValue;
         ONEJS.reactSetState[stateId]([...ONEJS.currentState[stateId].value]);
     }
     else if(action === 'update') {//Update value from state variable

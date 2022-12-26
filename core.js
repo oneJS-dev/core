@@ -1937,12 +1937,12 @@ export const readFlavor = (...flavorName) => {
 * @returns {void}
 */
 export const updateFlavor = (flavorName, themeVariableId) => value => {
-    if(!ONEJS.style?.flavorName) {
+    if(!ONEJS?.theme[flavorName]) {
         console.error('[oneJS] updateFlavor: Invalid flavor name: ' + flavorName);
         return;
     }
-    if(typeof themeVariableId === 'string') ONEJS.theme.flavorName.themeVariableId = value;
-    ONEJS.theme.flavorName = value;
+    if(typeof themeVariableId === 'string') ONEJS.theme[flavorName][themeVariableId] = value;
+    else ONEJS.theme[flavorName] = value;
 };
 
 /** 

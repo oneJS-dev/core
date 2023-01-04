@@ -238,7 +238,7 @@ const readUrlData = url => {
         return OSSPECIFICS.os === 'web' ?
             decodeURI(location.pathname + location.search) : ONEJS.url;
     }
-    const urlToMatch = url.replaceAll(':', '*');//The url without the data ':' segments
+    const urlToMatch = url.replace(/:/g, '*');  //The url without the data ':' segments. RN does not support 'replaceAll' function
     if(!matchUrl(urlToMatch)) {
         if(urlToMatch === url) return false;    //If the url does not match returns false (does not contain : segments)
         return;

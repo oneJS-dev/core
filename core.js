@@ -289,9 +289,11 @@ const readUrlData = url => {
 * ```
 * @returns {void}
 */
+//Web Only
 const setupUrl = (url) => component => { //Setup animation on property changes
-    const touchEvent = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) ||
-        (navigator.msMaxTouchPoints > 0)) ? 'press' : 'click';
+    // const touchEvent = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) ||
+    //     (navigator.msMaxTouchPoints > 0)) ? 'press' : 'click';
+    const touchEvent = 'click';
 
     //If url is of type link. Redirects to the linked address
     //If a link does not start with '/', it gets appended to the last part of the url (relative). 

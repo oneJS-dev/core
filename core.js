@@ -1728,7 +1728,7 @@ export const app = ({name, component, state, theme, style, text, font, firestore
                     let fontStyle = document.createElement('style');
                     Object.entries(font).forEach(([key, value]) => {
                         fontStyle.appendChild(document.createTextNode("@font-face {font-family: " +
-                            key + "; src: url('" + value + "');}"));
+                            key + "; src: url('" + value + "');font-display: swap;}"));
                     });
                     document.head.appendChild(fontStyle);
                 }

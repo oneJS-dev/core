@@ -382,15 +382,15 @@ const updateUrl = url => {
 * @example
 * ```javascript 
 *   const state = {eventId: 'event123', myEvent: source{firestore: {'events/<eventId>'}} }
-*   readPathWithState('events/<eventId>') //eventId = 'event123', Returns 'events/event123'
-*   readPathWithState('events/<eventId>') //eventId = undefined, Returns undefined
+*   readPath('events/<eventId>') //eventId = 'event123', Returns 'events/event123'
+*   readPath('events/<eventId>') //eventId = undefined, Returns undefined
 * ``` 
 * @returns {String} Returns the path after replacing the '<stateId>' with the corresponding value.
 * @todo Discarded idea: Besides @stateId, we could also implement :, to combine and retrieve the
 * value for both the state and url data. (Creates confusion, final decision is to only use state 
 * variables)
 */
-const readPathWithState = (path) => {
+const readPath = (path) => {
     let finalPath = path;
     //Path Includes State Variable
     if(finalPath.includes('<') && finalPath.includes('>')) {
@@ -402,6 +402,13 @@ const readPathWithState = (path) => {
     }
     return finalPath;
 };
+
+const readPathState = (path) => {
+    if(path.includes('<') && path.path('>')) {
+        return (path.split('<')[1]).split('>')[0]; //Returns the stateId from in between the '<' '>' characters.
+    }
+    return;
+}
 
 //=============================================================================
 // FIREBASE SETUP: This is an optional module that allows the user to work with
@@ -431,9 +438,9 @@ const readPathWithState = (path) => {
 * @returns {void}
 */
 const firestoreGetDataOnce = async (path, stateId) => {
-    if(!read(readPathWithState(path))) return; //If the state is not defined return undefined
+    if(!read(readPath(path))) return; //If the state is not defined return undefined
     if(path.split('/').length % 2 === 0) {
-        const docRef = doc(ONEJS.firestore, readPathWithState(path));
+        const docRef = doc(ONEJS.firestore, readPath(path));
         try {
             const docSnap = await getDoc(docRef);
             if(docSnap.exists()) {write(stateId, docSnap.data(), 'firestore', 'update');}
@@ -442,7 +449,7 @@ const firestoreGetDataOnce = async (path, stateId) => {
         catch(error) {console.error("Error getting document:", error);}
     }
     else {
-        const collRef = collection(ONEJS.firestore, readPathWithState(path));
+        const collRef = collection(ONEJS.firestore, readPath(path));
         try {
             const collSnap = await getDocs(collRef);//doc.data() is never undefined for query doc snapshots
             const result = [];
@@ -467,7 +474,7 @@ const firestoreGetDataOnce = async (path, stateId) => {
 * Dynamic Path Examples:
 * ```javascript 
 *   path = @collectionId    //Returns array of events []. This is not recommended for security reasons, state variables in the path should be at document level
-*   path = events/@eventId  //Replaces @eventId (calling readPathWithState) with state variable value and returns event object
+*   path = events/@eventId  //Replaces @eventId (calling readPath) with state variable value and returns event object
 * ``` 
 * @todo Discarded idea: Besides @stateId, we could also implement :, to combine and retrieve the value for both the state and url data. (Creates confusion as paths and urls are not the same)
 * @returns {void}
@@ -476,7 +483,7 @@ const firestoreRead = (path) => (stateId, context = '') => {
     if(context === 'firestore') return;
     if(!path) return;
     else if(path.includes('@') && context === 'initialize') {//Subscribes for state changes during 'setupState' initialization
-        window.addEventListener(readPathWithState(path) + 'stateChange',
+        window.addEventListener(readPath(path) + 'stateChange',
             async (e) => {firestoreGetDataOnce(path, stateId);}, false);//Called on state updates
         firestoreGetDataOnce(path, stateId);//Pulls data once for the first time
     }
@@ -530,7 +537,7 @@ const firestoreWrite = (path) => async (data, context = '', documentId) => {
     if(context === 'firestore') return;//This means firestore has read a value and is updating the state, no need to write to the database 
     if(!path) return;
     const finalPath = documentId != null ?
-        readPathWithState(path).concat('/', documentId.toString()) : readPathWithState(path);
+        readPath(path).concat('/', documentId.toString()) : readPath(path);
     //If the path is even, modify the document
     if(finalPath.split('/').length % 2 === 0) {
         try {
@@ -557,14 +564,14 @@ const firestoreWrite = (path) => async (data, context = '', documentId) => {
 * ```javascript 
 *   path = events;           data = {event}; //Removes entire events collection. Not advised.
 *   path = events/event123;  data = {event}; //Removes document with id 'event123'
-*   path = events/@eventId;  data = {event}; //Replaces @eventId (calling readPathWithState) with state variable value and removes document
+*   path = events/@eventId;  data = {event}; //Replaces @eventId (calling readPath) with state variable value and removes document
 * ```
 * @returns {void}
 */
 const firestoreRemove = (path) => async (documentId) => {
     if(!path) return;
     const finalPath = documentId != null ?
-        readPathWithState(path).concat('/', documentId.toString()) : readPathWithState(path);
+        readPath(path).concat('/', documentId.toString()) : readPath(path);
     //If the path is even, remove the document
     if(finalPath.split('/').length % 2 === 0) {
         try {const docRef = await deleteDoc(doc(ONEJS.firestore, finalPath));}
@@ -575,7 +582,7 @@ const firestoreRemove = (path) => async (documentId) => {
         //To delete an entire collection or subcollection in Cloud Firestore, 
         //retrieve all the documents within the collection or subcollection and delete them
         //Deleting collections from a Web client is not recommended.
-        const collRef = collection(ONEJS.firestore, readPathWithState(path));
+        const collRef = collection(ONEJS.firestore, readPath(path));
         try {
             const collSnap = await getDocs(collRef);
             collSnap.forEach(async docData => await deleteDoc(doc(ONEJS.firestore,
@@ -618,7 +625,7 @@ const firestoreRemove = (path) => async (documentId) => {
 * Dynamic Path Examples:
 * ```javascript 
 *   path = @collectionId    //Returns array of events []. This is not recommended for security reasons, state variables in the path should be at document level
-*   path = events/@eventId  //Replaces @eventId (calling readPathWithState) with state variable value and returns event object
+*   path = events/@eventId  //Replaces @eventId (calling readPath) with state variable value and returns event object
 * ``` 
 * @returns {void}
 */
@@ -626,9 +633,9 @@ const indexedDBRead = (path) => (stateId, context = '') => {
     if(context === 'indexedDB') return;
     if(!path) return;
     if(path.includes('@') && context === 'initialize') {//Subscribes for state changes during 'setupState' initialization
-        window.addEventListener(readPathWithState(path) + 'stateChange', async (e) => {//Note: e.detail also contains the newState
-            if(!read(readPathWithState(path))) return;//If the state is not defined return.
-            const pathSegments = readPathWithState(path).split('/').filter(Boolean);
+        window.addEventListener(readPath(path) + 'stateChange', async (e) => {//Note: e.detail also contains the newState
+            if(!read(readPath(path))) return;//If the state is not defined return.
+            const pathSegments = readPath(path).split('/').filter(Boolean);
             try {
                 const transaction = ONEJS.idb.transaction(pathSegments[0], 'readonly');
                 const store = transaction.objectStore(pathSegments[0]);
@@ -644,7 +651,7 @@ const indexedDBRead = (path) => (stateId, context = '') => {
     }
     // As opposed to Firestore's 'onSnapshot' method, there is no option to observe changes in indexedDB. Therefore the 'read' function
     // is triggered everytime the 'write' function is called.
-    const pathSegments = readPathWithState(path).split('/').filter(Boolean);
+    const pathSegments = readPath(path).split('/').filter(Boolean);
     try {
         const transaction = ONEJS.idb.transaction(pathSegments[0], 'readonly');
         const store = transaction.objectStore(pathSegments[0]);
@@ -670,14 +677,14 @@ const indexedDBRead = (path) => (stateId, context = '') => {
 *   path = events/event123;  data = {event}; //Updates {event123} with {event}
 *   path = @collection       data = {event}; //Warning: Not a good pattern to use variables at collection level for security reasons. 
 *                                            //Replaces @collection with state variable value and adds a new document to the collection.
-*   path = events/@eventId;  data = {event}; //Replaces @eventId (calling readPathWithState) with state variable value and updates document with {event}
+*   path = events/@eventId;  data = {event}; //Replaces @eventId (calling readPath) with state variable value and updates document with {event}
 * ```
 * @returns {void}
 */
 const indexedDBWrite = (path) => (data, context = '', documentId) => {
     if(context === 'indexedDB') return;
     if(!path) return;
-    const pathSegments = readPathWithState(path).split('/').filter(Boolean);
+    const pathSegments = readPath(path).split('/').filter(Boolean);
     if(documentId != null) {//Update specific document within collection 
         pathSegments[1] = documentId;
         data.id = documentId;
@@ -701,13 +708,13 @@ const indexedDBWrite = (path) => (data, context = '', documentId) => {
 * ```javascript 
 *   path = events;           //Removes entire events collection. Not advised.
 *   path = events/event123;  //Removes document with id 'event123'
-*   path = events/@eventId;  //Replaces @eventId (calling readPathWithState) with state variable value and removes document
+*   path = events/@eventId;  //Replaces @eventId (calling readPath) with state variable value and removes document
 * ```
 * @returns {void}
 */
 const indexedDBRemove = (path) => (documentId) => {
     if(!path) return;
-    const pathSegments = readPathWithState(path).split('/').filter(Boolean);
+    const pathSegments = readPath(path).split('/').filter(Boolean);
     if(documentId != null) pathSegments[1] = parseInt(documentId);
     try {
         const transaction = ONEJS.idb.transaction(pathSegments[0], 'readwrite');
@@ -1142,8 +1149,8 @@ const setupState = (config) => {
         }
         //If defined by the user, use Firestore database as the source of data.
         else if(value?.source?.firestore) {
-            if(readPathWithState(value.source.firestore)) {
-                ONEJS.currentState[readPathWithState(value.source.firestore)].alert = true;//In case the path includes a state variable, alert for changes
+            if(readPathState(value.source.firestore)) {
+                ONEJS.currentState[readPathState(value.source.firestore)].alert = true;//In case the path includes a state variable, alert for changes
                 ONEJS.currentState[stateId].source = firestoreRead(value.source.firestore);//This is required for collections, when we insert a document by querying the source we retrieve the document id
             }
             firestoreRead(value.source.firestore)(stateId, 'initialize');
@@ -1151,8 +1158,8 @@ const setupState = (config) => {
         //If defined by the user, use IndexedDB as the source option
         else if(value?.source?.indexedDB) {
             ONEJS.currentState[stateId].source = indexedDBRead(value.source.indexedDB);
-            if(readPathWithState(value.source.indexedDB)) {
-                ONEJS.currentState[readPathWithState(value.source.indexedDB)].alert = true;
+            if(readPathState(value.source.indexedDB)) {
+                ONEJS.currentState[readPathState(value.source.indexedDB)].alert = true;
             }//In case the path includes a state variable, alert for changes
             let collections = [value.source.indexedDB.split('/').filter(Boolean)[0]];//Note: On collections better to avoid using state variables (@stateId)
             if(value.source.collections && value.source.collections.length) {
@@ -1672,7 +1679,9 @@ export const app = ({name, component, state, theme, style, text, font, firestore
     ONEJS.appName = name;
     ONEJS.appText = (text && typeof text === 'object') ? {...text} : undefined;
     ONEJS.style = (style && typeof style === 'object') ? {...style} : undefined;
-    ONEJS.firestore = (firestore && typeof firestore === 'object') ? {...firestore} : undefined;
+    //This line is making it fail for react native!!!
+    // ONEJS.firestore = (firestore && typeof firestore === 'object') ? {...firestore} : undefined;
+    ONEJS.firestore = (firestore && typeof firestore === 'object') ? firestore : undefined;
     setupTheme(theme); //Setting up before AppComponent for the css class order.
 
     //*REACT SPECIFIC*
